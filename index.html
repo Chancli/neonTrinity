@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Orbit: Trinity + AI</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: 'Orbitron', sans-serif;
+            touch-action: none; /* Crítico para juegos móviles */
+        }
+
+        #gameCanvas {
+            display: block;
+        }
+
+        /* Capa de UI */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .score-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .score-display {
+            color: #fff;
+            font-size: 24px;
+            text-shadow: 0 0 10px #0ff;
+            z-index: 10;
+            font-weight: bold;
+        }
+
+        .high-score {
+            color: #aaa;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        /* Menús */
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: auto;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            color: #0ff;
+            font-size: 40px;
+            margin: 0 0 10px 0;
+            text-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
+            text-align: center;
+            letter-spacing: 4px;
+            line-height: 1.1;
+        }
+
+        h1 span {
+            font-size: 20px;
+            color: #ff0055;
+            letter-spacing: 8px;
+        }
+
+        p {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 15px;
+            line-height: 1.5;
+            max-width: 85%;
+            color: #ccc;
+        }
+
+        /* Cajas de texto IA */
+        .ai-text-box {
+            min-height: 50px;
+            width: 85%;
+            max-width: 400px;
+            margin-bottom: 20px;
+            padding: 12px;
+            border-left: 3px solid #0ff;
+            background: rgba(0, 255, 255, 0.05);
+            color: #dff;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+        }
+        
+        .ai-text-box.error {
+            border-left-color: #ff0055;
+            color: #ffaaaa;
+        }
+
+        button {
+            background: transparent;
+            color: #0ff;
+            border: 2px solid #0ff;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            transition: all 0.15s;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:active {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 30px #0ff;
+            transform: scale(0.96);
+        }
+
+        /* Botones IA */
+        .ai-btn {
+            font-size: 11px;
+            padding: 8px 15px;
+            border: 1px solid #a0f;
+            color: #a0f;
+            box-shadow: 0 0 5px #a0f;
+            margin-bottom: 15px;
+            background: rgba(100, 0, 255, 0.05);
+        }
+        
+        .ai-btn:active {
+            background: #a0f;
+            color: #fff;
+            box-shadow: 0 0 15px #a0f;
+        }
+
+        .loader {
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas del Juego -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Score -->
+    <div class="ui-layer">
+        <div class="score-container">
+            <div class="score-display">SCORE: <span id="scoreEl">0</span></div>
+            <div class="high-score">BEST: <span id="highScoreEl">0</span></div>
+        </div>
+    </div>
+
+    <!-- Menú Inicio -->
+    <div id="startMenu" class="menu-screen">
+        <h1>NEON<br><span>TRINITY</span></h1>
+        
+        <div id="missionBox" class="ai-text-box">
+            Enlace neuronal establecido. Esperando órdenes...
+        </div>
+        <button id="generateMissionBtn" class="ai-btn">✨ GENERAR DIRECTIVA</button>
+
+        <p>3 Órbitas. Ciclo Infinito.<br>Toca para saltar hacia afuera.<br>Cuidado al regresar al centro.</p>
+        <button id="startBtn">INICIAR SECUENCIA</button>
+    </div>
+
+    <!-- Menú Game Over -->
+    <div id="gameOverMenu" class="menu-screen hidden">
+        <h1 style="color: #ff0055; text-shadow: 0 0 20px #ff0055; font-size: 36px;">SISTEMA<br>CRÍTICO</h1>
+        <p>Sincronización final: <span id="finalScore" style="color:#fff; font-weight:bold;">0</span></p>
+        
+        <button id="analyzeBtn" class="ai-btn" style="border-color: #ff0055; color: #ff0055; box-shadow: 0 0 5px #ff0055;">✨ ANÁLISIS DE IA</button>
+        <div id="analysisBox" class="ai-text-box" style="display:none; border-left-color: #ff0055;">
+            Procesando datos de caja negra...
+        </div>
+
+        <button id="restartBtn" style="border-color: #ff0055; color: #ff0055; box-shadow: 0 0 15px #ff0055;">REINICIAR</button>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN API GEMINI ---
+        const apiKey = ""; // La clave se inyecta en el entorno de ejecución
+
+        async function callGemini(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`Error: ${response.status}`);
+                
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error("Gemini Error:", error);
+                return "Error de conexión con el Núcleo AI.";
+            }
+        }
+
+        // --- ELEMENTOS DOM IA ---
+        const missionBox = document.getElementById('missionBox');
+        const generateMissionBtn = document.getElementById('generateMissionBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const analysisBox = document.getElementById('analysisBox');
+
+        // --- HANDLERS IA ---
+
+        generateMissionBtn.addEventListener('click', async (e) => {
+            e.stopPropagation(); 
+            missionBox.innerHTML = '<div class="loader"></div> Desencriptando...';
+            
+            const prompt = "Genera una misión estilo Cyberpunk muy corta (max 15 palabras) para un juego de 3 carriles orbitales. Tono: Urgente. Español.";
+            
+            const text = await callGemini(prompt);
+            missionBox.innerText = text;
+        });
+        
+        generateMissionBtn.addEventListener('touchstart', async (e) => {
+             e.stopPropagation();
+        }, {passive: false});
+
+
+        analyzeBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            analysisBox.style.display = 'flex';
+            analysisBox.innerHTML = '<div class="loader"></div> Analizando datos...';
+            analyzeBtn.style.display = 'none';
+
+            const currentScore = parseInt(document.getElementById('finalScore').innerText);
+            const personalBest = parseInt(localStorage.getItem('neonOrbitHighScore') || 0);
+            
+            let tone = "neutral";
+            if (currentScore < 40) tone = "burla robótica superior";
+            else if (currentScore > 200) tone = "admiración fría y calculadora";
+            else tone = "análisis técnico de errores";
+
+            const prompt = `Eres una IA de combate. El usuario piloto murió con Score: ${currentScore} (Record: ${personalBest}).
+            Dame una frase sarcástica o técnica sobre su fallo. Español.`;
+
+            const text = await callGemini(prompt);
+            analysisBox.innerText = text;
+        });
+        
+        analyzeBtn.addEventListener('touchstart', (e) => {
+             e.stopPropagation();
+        }, {passive: false});
+
+
+        // --- LÓGICA DEL JUEGO ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const scoreEl = document.getElementById('scoreEl');
+        const highScoreEl = document.getElementById('highScoreEl');
+        const finalScoreEl = document.getElementById('finalScore');
+        const startMenu = document.getElementById('startMenu');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        let gameState = 'MENU'; 
+        let score = 0;
+        let highScore = localStorage.getItem('neonOrbitHighScore') || 0;
+        highScoreEl.innerText = highScore;
+        let frames = 0;
+        let gameSpeed = 1;
+
+        let centerX, centerY;
+        
+        // CONFIGURACIÓN DE 3 ÓRBITAS
+        const laneCount = 3; 
+        let radii = []; // Array para almacenar los 3 radios
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            centerX = canvas.width / 2;
+            centerY = canvas.height / 2;
+            
+            const minDim = Math.min(canvas.width, canvas.height);
+            
+            // Definir los 3 radios proporcionales
+            radii = [
+                minDim * 0.20, // Interior
+                minDim * 0.32, // Medio
+                minDim * 0.44  // Exterior
+            ];
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor(x, y, color, speed, life) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.angle = Math.random() * Math.PI * 2;
+                this.velocity = Math.random() * speed + 0.5;
+                this.vx = Math.cos(this.angle) * this.velocity;
+                this.vy = Math.sin(this.angle) * this.velocity;
+                this.life = life;
+                this.maxLife = life;
+                this.size = Math.random() * 3 + 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+                this.size *= 0.95;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Player {
+            constructor() {
+                this.angle = 0;
+                this.lane = 0; // 0, 1, 2
+                this.currentRadius = radii[0];
+                this.targetRadius = radii[0];
+                this.speed = 0.05; // Velocidad rápida
+                this.color = '#00ffff';
+                this.trail = [];
+            }
+
+            update() {
+                this.angle += this.speed;
+                
+                this.targetRadius = radii[this.lane];
+                
+                // Transición rápida (LERP 0.45)
+                this.currentRadius += (this.targetRadius - this.currentRadius) * 0.45;
+
+                this.x = centerX + Math.cos(this.angle) * this.currentRadius;
+                this.y = centerY + Math.sin(this.angle) * this.currentRadius;
+                
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 12) this.trail.shift();
+            }
+
+            switchLane() {
+                // CICLO: 0 -> 1 -> 2 -> 0
+                this.lane = (this.lane + 1) % laneCount;
+                createExplosion(this.x, this.y, 'rgba(0,255,255,0.5)', 3);
+            }
+
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                for (let i = 0; i < this.trail.length; i++) {
+                    const point = this.trail[i];
+                    if (i === 0) ctx.moveTo(point.x, point.y);
+                    else ctx.lineTo(point.x, point.y);
+                }
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+                
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Obstacle {
+            constructor(angle, lane, type) {
+                this.angle = angle;
+                this.lane = lane;
+                this.type = type; 
+                this.active = true;
+                this.pulse = 0;
+            }
+
+            update() {
+                this.pulse += 0.15;
+            }
+
+            draw() {
+                if (!this.active) return;
+                const r = radii[this.lane];
+                const x = centerX + Math.cos(this.angle) * r;
+                const y = centerY + Math.sin(this.angle) * r;
+
+                ctx.save();
+                if (this.type === 'enemy') {
+                    ctx.shadowBlur = 10 + Math.sin(this.pulse) * 5;
+                    ctx.shadowColor = '#ff0055';
+                    ctx.strokeStyle = '#ff0055';
+                    ctx.fillStyle = '#550022';
+                    ctx.lineWidth = 2;
+                    ctx.translate(x, y);
+                    ctx.rotate(this.angle + Math.PI / 4); 
+                    const size = 10;
+                    ctx.beginPath();
+                    ctx.rect(-size/2, -size/2, size, size);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#ffcc00';
+                    ctx.fillStyle = '#ffcc00';
+                    const size = 5 + Math.sin(this.pulse) * 2;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        let player;
+        let entities = [];
+        let particles = [];
+        let shake = 0;
+
+        function initGame() {
+            score = 0;
+            frames = 0;
+            gameSpeed = 1;
+            scoreEl.innerText = score;
+            player = new Player();
+            entities = [];
+            particles = [];
+            gameState = 'PLAYING';
+            startMenu.classList.add('hidden');
+            gameOverMenu.classList.add('hidden');
+            
+            setTimeout(() => {
+                analyzeBtn.style.display = 'block';
+                analysisBox.style.display = 'none';
+                analysisBox.innerHTML = '';
+            }, 500);
+        }
+
+        function createExplosion(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color, 6, 25));
+            }
+        }
+
+        function spawnEntities() {
+            if (frames % 30 === 0) {
+                const lane = Math.floor(Math.random() * laneCount);
+                const spawnAngle = player.angle + Math.PI; 
+                const type = Math.random() < 0.25 ? 'coin' : 'enemy'; 
+                entities.push(new Obstacle(spawnAngle, lane, type));
+            }
+        }
+
+        function checkCollisions() {
+            const playerHitbox = 12; 
+            const pDist = player.currentRadius;
+
+            for (let i = entities.length - 1; i >= 0; i--) {
+                const ent = entities[i];
+                const entDist = radii[ent.lane];
+
+                // Chequeo Radial
+                const radialDiff = Math.abs(pDist - entDist);
+                
+                if (radialDiff < 15) {
+                    // Chequeo Angular
+                    let pa = player.angle % (Math.PI * 2);
+                    let ea = ent.angle % (Math.PI * 2);
+                    if (pa < 0) pa += Math.PI * 2;
+                    if (ea < 0) ea += Math.PI * 2;
+                    let diff = Math.abs(pa - ea);
+                    if (diff > Math.PI) diff = (Math.PI * 2) - diff;
+                    
+                    const arcDist = diff * pDist;
+
+                    if (arcDist < playerHitbox) {
+                        if (ent.type === 'enemy') {
+                            createExplosion(player.x, player.y, '#ff0055', 50);
+                            shake = 25;
+                            gameOver();
+                        } else if (ent.type === 'coin') {
+                            createExplosion(player.x, player.y, '#ffcc00', 12);
+                            score += 10;
+                            scoreEl.innerText = score;
+                            ent.active = false;
+                            player.speed += 0.0002;
+                            gameSpeed += 0.01;
+                        }
+                    }
+                }
+                if (player.angle - ent.angle > Math.PI * 2) {
+                    ent.active = false;
+                }
+            }
+            entities = entities.filter(e => e.active);
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            finalScoreEl.innerText = score;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('neonOrbitHighScore', highScore);
+                highScoreEl.innerText = highScore;
+            }
+            setTimeout(() => {
+                gameOverMenu.classList.remove('hidden');
+            }, 500);
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') {
+                if (particles.length > 0 || shake > 0) draw();
+                if (shake > 0) shake *= 0.9;
+                return;
+            }
+            frames++;
+            player.update();
+            spawnEntities();
+            particles.forEach(p => p.update());
+            particles = particles.filter(p => p.life > 0);
+            checkCollisions();
+            if (shake > 0) shake *= 0.9;
+            if (shake < 0.5) shake = 0;
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.lineWidth = 1;
+            radii.forEach((r, index) => {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+                ctx.strokeStyle = index === 1 ? 'rgba(0, 255, 255, 0.2)' : 'rgba(0, 255, 255, 0.1)';
+                ctx.stroke();
+            });
+
+            ctx.save();
+            ctx.shadowBlur = 20 + Math.sin(frames * 0.1) * 10;
+            ctx.shadowColor = '#0ff';
+            ctx.fillStyle = '#000';
+            ctx.strokeStyle = '#0ff';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radii[0] * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.save();
+            if (shake > 0) {
+                const dx = (Math.random() - 0.5) * shake;
+                const dy = (Math.random() - 0.5) * shake;
+                ctx.translate(dx, dy);
+            }
+            drawBackground();
+            entities.forEach(e => e.draw());
+            if (gameState === 'PLAYING') player.draw();
+            particles.forEach(p => p.draw());
+            ctx.restore();
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            update();
+            draw();
+        }
+
+        // Control: Mouse/Touch
+        function handleInput(e) {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('.menu-screen')) return;
+            
+            if (gameState === 'PLAYING') {
+                if(e.type === 'touchstart') e.preventDefault(); 
+                player.switchLane();
+            }
+        }
+
+        window.addEventListener('mousedown', handleInput);
+        window.addEventListener('touchstart', handleInput, {passive: false});
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameState === 'PLAYING') {
+                player.switchLane();
+            }
+        });
+
+        startBtn.addEventListener('click', (e) => { e.stopPropagation(); initGame(); });
+        startBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); initGame(); });
+
+        restartBtn.addEventListener('click', (e) => { e.stopPropagation(); initGame(); });
+        restartBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); initGame(); });
+
+        loop();
+
+    </script>
+</body>
+</html>
