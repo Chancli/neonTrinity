@@ -1,16 +1,16 @@
 {
   "background_color": "#000000",
   "dir": "ltr",
-  "display": "standalone",
+  "display": "fullscreen",
   "name": "juegotrinity.app",
-  "orientation": "any",
+  "orientation": "natural",
   "scope": "/",
   "short_name": "juegotrinity",
   "start_url": "/",
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'&gt;&lt;rect width='512' height='512' fill='%23000'/&gt;&lt;circle cx='256' cy='256' r='200' stroke='%230ff' stroke-width='20' fill='none'/&gt;&lt;circle cx='256' cy='256' r='120' stroke='%230ff' stroke-width='10' fill='none' opacity='0.5'/&gt;&lt;circle cx='256' cy='100' r='30' fill='%230ff'/&gt;&lt;/svg&gt;",
+      "src": "data:image/svg+xml,&amp;lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'&amp;gt;&amp;lt;rect width='512' height='512' fill='%23000'/&amp;gt;&amp;lt;circle cx='256' cy='256' r='200' stroke='%230ff' stroke-width='20' fill='none'/&amp;gt;&amp;lt;circle cx='256' cy='256' r='120' stroke='%230ff' stroke-width='10' fill='none' opacity='0.5'/&amp;gt;&amp;lt;circle cx='256' cy='100' r='30' fill='%230ff'/&amp;gt;&amp;lt;/svg&amp;gt;",
       "type": "image/svg+xml",
       "isSquare": false,
       "isPng": false,
@@ -23,5 +23,10 @@
     }
   ],
   "id": "neonTrinity",
-  "description": "Increíble lo que hace la flojera"
+  "description": "Increíble lo que hace la flojera",
+  "lang": "es",
+  "categories": [
+    "games",
+    "kids"
+  ]
 }
