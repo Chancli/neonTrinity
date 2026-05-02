@@ -14,25 +14,29 @@
         
         /* UI OVERLAYS */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); z-index: 10; }
-        .score-display { color: #fff; font-size: 32px; text-shadow: 0 0 15px var(--player-color, #4285F4); font-family: 'Orbitron', sans-serif; font-weight: bold; }
-        .hints { display: flex; justify-content: space-between; width: 100%; color: rgba(255, 255, 255, 0.5); font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 2px;}
+        .score-display { color: #fff; font-size: 32px; text-shadow: 0 0 15px var(--player-color, #4285F4); font-family: 'Orbitron', sans-serif; font-weight: bold; margin-top: 40px; }
+        .hints { display: flex; justify-content: space-between; width: 100%; color: rgba(255, 255, 255, 0.4); font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 2px;}
+        
+        /* CONTROL DE VOLUMEN FLOTANTE (CANVAS) */
+        .floating-vol { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; z-index: 50; display: flex; align-items: center; gap: 10px; pointer-events: auto; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
+        .floating-vol span { font-size: 14px; color: #fff; }
+        input[type="range"] { -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.3); height: 4px; border-radius: 2px; outline: none; width: 80px; cursor: pointer; touch-action: auto; /* Permite deslizar en Android */ }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
         
         /* MENUS (Glassmorphism) */
-        .menu-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 16, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; pointer-events: auto; transition: opacity 0.4s ease; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 40px 20px; overflow-y: auto; }
+        .menu-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 16, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; pointer-events: auto; transition: opacity 0.4s ease; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 60px 20px; overflow-y: auto; }
         .hidden { opacity: 0; pointer-events: none; z-index: 0; }
         
         h1 { color: #fff; font-size: 42px; margin: 0 0 20px; text-align: center; line-height: 1.1; font-family: 'Orbitron', sans-serif; letter-spacing: 2px;}
         h1 span { color: #EA4335; font-size: 24px; letter-spacing: 8px; display: block; margin-top: 5px; font-family: 'Google Sans', sans-serif; font-weight: 700;}
         
         .status-box { width: 100%; max-width: 320px; border-left: 4px solid #34A853; background: rgba(255, 255, 255, 0.05); border-radius: 0 8px 8px 0; color: #e0e0e0; padding: 12px 15px; margin-bottom: 25px; font-family: monospace; font-size: 12px; }
-        
         .section-title { width: 100%; max-width: 320px; text-align: left; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; margin-top: 10px;}
         
         button { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 14px 20px; font-size: 14px; font-family: 'Google Sans', sans-serif; font-weight: bold; cursor: pointer; border-radius: 8px; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; width: 100%; max-width: 320px; transition: all 0.2s; position: relative; overflow: hidden;}
         button:active { transform: scale(0.97); }
         button:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
         
-        /* Botones Especiales IO */
         .btn-primary { background: #4285F4; border: none; color: white; box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4); }
         .btn-primary:hover { background: #5c97f5; border: none;}
         .btn-radio { border-color: #34A853; color: #34A853; }
@@ -74,14 +78,21 @@
     <canvas id="gameCanvas"></canvas>
     
     <div class="ui-layer">
-        <div class="score-display">IO SCORE: <span id="scoreEl">0</span></div>
-        <div class="hints"><span>&lt; Tap Izquierda</span><span>Tap Derecha &gt;</span></div>
+        <div class="floating-vol">
+            <span>🔊</span>
+            <input type="range" id="volSliderCanvas" min="0" max="1" step="0.05" value="0.5" title="Volumen General">
+        </div>
+        
+        <div>
+            <div class="score-display">SCORE: <span id="scoreEl">0</span></div>
+        </div>
+        <div class="hints"><span>&lt; Mitad Izquierda</span><span>Mitad Derecha &gt;</span></div>
     </div>
 
     <!-- MAIN MENU -->
     <div id="startMenu" class="menu-screen">
         <h1>NEON<br><span>TRINITY '26</span></h1>
-        <div class="status-box" id="startMsg">SISTEMA: ONLINE.<br>IO Audio Engine Preparado.</div>
+        <div class="status-box" id="startMsg">SISTEMA: ONLINE.<br>Controles táctiles de panel dividio.</div>
         
         <div class="section-title">ÓRBITAS ACTIVAS</div>
         <div class="orbit-selector">
@@ -101,21 +112,21 @@
         </div>
 
         <button id="startBtn" class="btn-primary" style="margin-top: 30px; font-size: 16px; padding: 16px;">INICIAR SECUENCIA</button>
-        <button id="settingsBtn">⚙️ PERSONALIZAR</button>
+        <button id="settingsBtn">⚙️ AJUSTES Y LDM</button>
     </div>
 
     <!-- SETTINGS MENU -->
     <div id="settingsMenu" class="menu-screen hidden">
-        <h1>ESTILO<br><span>VISUAL</span></h1>
+        <h1>SISTEMA<br><span>AJUSTES</span></h1>
         
-        <div class="section-title" style="margin-top: 30px;">TEMA DE COLOR</div>
+        <div class="section-title" style="margin-top: 10px;">TEMA DE COLOR</div>
         <div class="theme-selector">
             <div class="theme-btn theme-io26 active" data-theme="io26"></div>
             <div class="theme-btn theme-cyan" data-theme="cyan"></div>
             <div class="theme-btn theme-crimson" data-theme="crimson"></div>
             <div class="theme-btn theme-gold" data-theme="gold"></div>
         </div>
-        
+
         <div class="section-title" style="margin-top: 10px;">RENDIMIENTO</div>
         <button id="ldmBtn" class="btn-radio" style="margin-bottom: 20px;">LDM: DESACTIVADO</button>
 
@@ -159,7 +170,8 @@
                 orbBtns: [document.getElementById('orb2'), document.getElementById('orb3'), document.getElementById('orb4')],
                 themeBtns: document.querySelectorAll('.theme-btn'), nameInput: document.getElementById('nameInput'),
                 submitScoreBtn: document.getElementById('submitScoreBtn'), leaderboardList: document.getElementById('leaderboardList'),
-                submitScoreArea: document.getElementById('submitScoreArea'), ldmBtn: document.getElementById('ldmBtn')
+                submitScoreArea: document.getElementById('submitScoreArea'), ldmBtn: document.getElementById('ldmBtn'),
+                volSliderCanvas: document.getElementById('volSliderCanvas')
             };
             
             let gameState = 'MENU', score = 0, frames = 0, W, H, CX, CY;
@@ -174,14 +186,14 @@
                 crimson: { player: '#ffffff', enemy: '#ff0000', jumper: '#ffaaaa', coin: '#ffffff', shadow: '#ff0000' },
                 gold: { player: '#ffd700', enemy: '#cccccc', jumper: '#ff4500', coin: '#ffd700', shadow: '#ffd700' }
             };
-            let config = { theme: 'io26', colors: THEMES['io26'], ldm: false };
+            let config = { theme: 'io26', colors: THEMES['io26'], ldm: false, volume: 0.5 };
 
             const aiDb = {intro:["Filtros listos.", "Conexión a GCP establecida."], win:["Sincronía."], fail:["Kernel Panic.", "Excepción no controlada."]};
             const RADIOS = { gaming: "https://stream.zeno.fm/0r0xa792kwzuv", trap: "https://stream.zeno.fm/f3wvbbqmdg8uv", bass: "https://bassdrive.radioca.st/;" };
 
-            // --- AUDIO ENGINE ---
+            // --- AUDIO ENGINE CON RUTEO SEGURO DE VOLUMEN ---
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            let actx, analyser, dataArray, sourceNode, audioEl, filterNode;
+            let actx, analyser, dataArray, sourceNode, audioEl, filterNode, masterGain;
             let globalAudioBuffer = null;
             let kickVisual = 0, beatDetected = false, isMusicLoaded = false;
             let beatHeat = 0, framesSinceSpawn = 0, pendingSpawn = false;
@@ -189,15 +201,25 @@
             let lastBeatTime = 0;
 
             const audio = {
-                init: () => { if(!actx) actx = new AudioContext(); if(actx.state === 'suspended') actx.resume(); },
+                init: () => { 
+                    if(!actx) {
+                        actx = new AudioContext();
+                        masterGain = actx.createGain();
+                        masterGain.connect(actx.destination);
+                        masterGain.gain.value = config.volume; 
+                        ui.volSliderCanvas.value = config.volume;
+                    } 
+                    if(actx.state === 'suspended') actx.resume(); 
+                },
                 playSfx: (f, t, d, vol=0.1) => {
                     if(!actx) return;
                     const o = actx.createOscillator(), g = actx.createGain();
                     o.type = t; o.frequency.setValueAtTime(f, actx.currentTime);
                     if(t==='sawtooth') o.frequency.exponentialRampToValueAtTime(f/2, actx.currentTime + d); 
+                    
                     g.gain.setValueAtTime(vol, actx.currentTime);
                     g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + d);
-                    o.connect(g); g.connect(actx.destination);
+                    o.connect(g); g.connect(masterGain); 
                     o.start(); o.stop(actx.currentTime + d);
                 },
                 jump: (u) => audio.playSfx(u ? 800 : 400, 'sine', 0.1, 0.05),
@@ -270,7 +292,7 @@
 
                     if (combinedScore > threshold && (now - lastBeatTime > 0.08)) {
                         beatDetected = true; lastBeatTime = now; beatHeat = Math.min(beatHeat + 0.2, 0.8);
-                        screenShake = Math.min(screenShake + 2, 8); 
+                        if(!config.ldm) screenShake = Math.min(screenShake + 2, 8); 
                     } else { beatDetected = false; }
                     
                     beatHeat *= 0.92;
@@ -282,7 +304,10 @@
             function setupAudioGraph(source) {
                 filterNode = actx.createBiquadFilter(); filterNode.type = "lowpass"; filterNode.frequency.value = 200;
                 analyser = actx.createAnalyser(); analyser.fftSize = 256;
-                source.connect(filterNode); filterNode.connect(analyser); source.connect(actx.destination);
+                
+                source.connect(filterNode); 
+                filterNode.connect(analyser); 
+                analyser.connect(masterGain); 
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
             }
 
@@ -322,11 +347,18 @@
 
             function loadConfig() {
                 const saved = localStorage.getItem('neonConfigIO');
-                if(saved) { const parsed = JSON.parse(saved); config.theme = parsed.theme || 'io26'; config.ldm = !!parsed.ldm; }
+                if(saved) { 
+                    const parsed = JSON.parse(saved); 
+                    config.theme = parsed.theme || 'io26'; 
+                    config.ldm = !!parsed.ldm; 
+                    config.volume = parsed.volume !== undefined ? parsed.volume : 0.5;
+                }
                 applyTheme(config.theme);
                 updateLdmUI();
+                if(masterGain) masterGain.gain.value = config.volume;
+                ui.volSliderCanvas.value = config.volume;
             }
-            function saveConfig() { localStorage.setItem('neonConfigIO', JSON.stringify({ theme: config.theme, ldm: config.ldm })); }
+            function saveConfig() { localStorage.setItem('neonConfigIO', JSON.stringify({ theme: config.theme, ldm: config.ldm, volume: config.volume })); }
             
             function applyTheme(name) {
                 config.theme = name; config.colors = THEMES[name];
@@ -635,18 +667,61 @@
                 draw(); 
             }
             
-            window.addEventListener('keydown', (e) => {
+            // --- SISTEMA QOL MATEMÁTICO UNIVERSAL ---
+            function processInputVector(dx, dy) {
                 if(gameState!=='PLAYING') return;
                 if(!isMusicLoaded) audio.init();
-                if(e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') player.move(-1);
-                if(e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') player.move(1);
+                
+                const px = Math.cos(player.angle);
+                const py = Math.sin(player.angle);
+                const dot = dx * px + dy * py;
+                
+                // Usamos un umbral para detectar si el input apunta "adentro" o "afuera"
+                if (dot < -0.15) player.move(-1); 
+                else if (dot > 0.15) player.move(1); 
+                else {
+                    // Fallback para las zonas muertas (polos) en las que el input es perfectamente perpendicular
+                    // Garantiza que el botón nunca se sienta roto
+                    if (dx === -1) player.move(-1);
+                    else if (dx === 1) player.move(1);
+                    else if (dy === -1) player.move(-1);
+                    else if (dy === 1) player.move(1);
+                }
+            }
+
+            // Teclado (Usa el mismo vector matemático)
+            window.addEventListener('keydown', (e) => {
+                const k = e.key.toLowerCase();
+                let dx = 0, dy = 0;
+                
+                if(k === 'arrowleft' || k === 'a') dx = -1;
+                if(k === 'arrowright' || k === 'd') dx = 1;
+                if(k === 'arrowup' || k === 'w') dy = -1;
+                if(k === 'arrowdown' || k === 's') dy = 1;
+                
+                if(dx !== 0 || dy !== 0) processInputVector(dx, dy);
             });
 
-            function handleInput(x){ if(gameState!=='PLAYING')return; if(!isMusicLoaded) audio.init(); if(x<W/2)player.move(-1);else player.move(1); }
-            window.addEventListener('mousedown',e=> { if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleInput(e.clientX); });
+            // Táctil (Paneles izquierdo y derecho puros, SIN inversión)
+            function handleTouchScreen(x) { 
+                if(gameState!=='PLAYING') return; 
+                if(!isMusicLoaded) audio.init(); 
+                
+                if (x < W / 2) {
+                    // Mitad izquierda pura: siempre hacia adentro
+                    player.move(-1);
+                } else {
+                    // Mitad derecha pura: siempre hacia afuera
+                    player.move(1);
+                }
+            }
+
+            window.addEventListener('mousedown',e=> { 
+                if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleTouchScreen(e.clientX); 
+            });
             window.addEventListener('touchstart',e=>{
-                if(e.target.tagName==='BUTTON'||e.target.tagName==='INPUT'||e.target.closest('.leaderboard-container'))return;
-                e.preventDefault(); handleInput(e.changedTouches[0].clientX);
+                if(e.target.tagName==='BUTTON'||e.target.tagName==='INPUT'||e.target.closest('.leaderboard-container')||e.target.closest('.floating-vol')) return;
+                e.preventDefault(); handleTouchScreen(e.changedTouches[0].clientX);
             },{passive:false});
             
             const bind = (el, fn) => { if(el) { el.addEventListener('click', (e)=>{e.stopPropagation();fn();}); } };
@@ -665,6 +740,12 @@
             bind(ui.closeSettingsBtn, () => { saveConfig(); ui.settingsMenu.classList.add('hidden'); });
             
             bind(ui.ldmBtn, () => { config.ldm = !config.ldm; updateLdmUI(); draw(); });
+            
+            ui.volSliderCanvas.addEventListener('input', (e) => {
+                config.volume = parseFloat(e.target.value);
+                if(masterGain) masterGain.gain.value = config.volume;
+                saveConfig();
+            });
 
             bind(ui.submitScoreBtn, saveScore);
 
