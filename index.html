@@ -3,211 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#000000">
-    <title>Neon Trinity</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23000'/><circle cx='256' cy='256' r='200' stroke='%230ff' stroke-width='20' fill='none'/><circle cx='256' cy='256' r='120' stroke='%230ff' stroke-width='10' fill='none' opacity='0.5'/><circle cx='256' cy='100' r='30' fill='%230ff'/></svg>">
+    <meta name="theme-color" content="#050510">
+    <title>Neon Trinity - Google IO Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: 'Orbitron', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050510; font-family: 'Google Sans', sans-serif; }
         #gameCanvas { display: block; width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); padding-bottom: max(20px, env(safe-area-inset-bottom)); z-index: 10; }
-        .score-display { color: #fff; font-size: 28px; text-shadow: 0 0 10px #0ff; font-weight: bold; }
-        .hints { display: flex; justify-content: space-between; width: 100%; color: rgba(0, 255, 255, 0.4); font-size: 12px; }
+        /* UI OVERLAYS */
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); z-index: 10; }
+        .score-display { color: #fff; font-size: 32px; text-shadow: 0 0 15px var(--player-color, #4285F4); font-family: 'Orbitron', sans-serif; font-weight: bold; }
+        .hints { display: flex; justify-content: space-between; width: 100%; color: rgba(255, 255, 255, 0.5); font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 2px;}
         
-        .menu-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; pointer-events: auto; transition: opacity 0.3s; backdrop-filter: blur(8px); padding: 20px; overflow-y: auto; }
+        /* MENUS (Glassmorphism) */
+        .menu-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 16, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; pointer-events: auto; transition: opacity 0.4s ease; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 40px 20px; overflow-y: auto; }
         .hidden { opacity: 0; pointer-events: none; z-index: 0; }
         
-        h1 { color: #0ff; font-size: 36px; margin: 10px 0; text-shadow: 0 0 20px #0ff; text-align: center; line-height: 1; flex-shrink: 0; }
-        h1 span { color: #f05; font-size: 20px; letter-spacing: 6px; display: block; margin-top: 5px; }
+        h1 { color: #fff; font-size: 42px; margin: 0 0 20px; text-align: center; line-height: 1.1; font-family: 'Orbitron', sans-serif; letter-spacing: 2px;}
+        h1 span { color: #EA4335; font-size: 24px; letter-spacing: 8px; display: block; margin-top: 5px; font-family: 'Google Sans', sans-serif; font-weight: 700;}
         
-        .status-box { width: 100%; max-width: 300px; border-left: 4px solid #0ff; background: rgba(0, 255, 255, 0.1); color: #dff; padding: 10px; margin-bottom: 15px; font-family: monospace; font-size: 11px; text-align: left; flex-shrink: 0; }
+        .status-box { width: 100%; max-width: 320px; border-left: 4px solid #34A853; background: rgba(255, 255, 255, 0.05); border-radius: 0 8px 8px 0; color: #e0e0e0; padding: 12px 15px; margin-bottom: 25px; font-family: monospace; font-size: 12px; }
         
-        button { background: transparent; color: #0ff; border: 2px solid #0ff; padding: 12px 20px; font-size: 14px; font-family: 'Orbitron', sans-serif; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0, 255, 255, 0.3); border-radius: 4px; text-transform: uppercase; margin-top: 8px; width: 100%; max-width: 300px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; pointer-events: auto; flex-shrink: 0; }
-        button:active { background: #0ff; color: #000; transform: scale(0.95); }
+        .section-title { width: 100%; max-width: 320px; text-align: left; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; margin-top: 10px;}
         
-        .file-btn { border-color: #f0f; color: #f0f; box-shadow: 0 0 10px rgba(255, 0, 255, 0.3); font-size: 12px; margin-bottom: 5px; }
-        .radio-btn { border-color: #0f0; color: #0f0; box-shadow: 0 0 10px rgba(0, 255, 0, 0.3); font-size: 12px; margin-bottom: 5px; }
-        .settings-btn { border-color: #aaa; color: #aaa; font-size: 12px; margin-top: 15px; box-shadow: none; }
+        button { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 14px 20px; font-size: 14px; font-family: 'Google Sans', sans-serif; font-weight: bold; cursor: pointer; border-radius: 8px; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; width: 100%; max-width: 320px; transition: all 0.2s; position: relative; overflow: hidden;}
+        button:active { transform: scale(0.97); }
+        button:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
         
-        #fileInput { display: none; }
-        #urlInput { width: 100%; max-width: 300px; background: #111; border: 1px solid #333; color: #fff; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+        /* Botones Especiales IO */
+        .btn-primary { background: #4285F4; border: none; color: white; box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4); }
+        .btn-primary:hover { background: #5c97f5; border: none;}
+        .btn-radio { border-color: #34A853; color: #34A853; }
+        .btn-danger { border-color: #EA4335; color: #EA4335; }
+        .btn-file { border-color: #FBBC05; color: #FBBC05; }
+        
+        #urlInput, #nameInput { width: 100%; max-width: 320px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px; margin-bottom: 10px; border-radius: 8px; font-family: monospace; font-size: 14px; outline: none; transition: border 0.3s;}
+        #urlInput:focus, #nameInput:focus { border-color: #4285F4; }
 
-        .orbit-selector { display: flex; gap: 10px; margin-bottom: 10px; pointer-events: auto; width: 100%; max-width: 300px; flex-shrink: 0; }
-        .orbit-btn { padding: 10px; font-size: 14px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #555; color: #555; box-shadow: none; margin: 0; cursor: pointer; }
-        .orbit-btn.active { border-color: #0ff; color: #0ff; box-shadow: 0 0 10px #0ff; background: rgba(0, 255, 255, 0.1); }
+        .orbit-selector { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 320px; }
+        .orbit-btn { flex: 1; padding: 12px 0; margin: 0; border-radius: 8px; text-align: center; }
+        .orbit-btn.active { background: #4285F4; color: #fff; border-color: #4285F4; box-shadow: 0 0 15px rgba(66, 133, 244, 0.4); }
 
-        .theme-selector { display: flex; gap: 8px; margin-bottom: 15px; width: 100%; max-width: 300px; }
-        .theme-btn { flex: 1; height: 40px; border: 2px solid #fff; border-radius: 4px; cursor: pointer; opacity: 0.6; transition: 0.2s; }
-        .theme-btn.active { opacity: 1; transform: scale(1.05); box-shadow: 0 0 10px #fff; }
+        .theme-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 320px; }
+        .theme-btn { height: 45px; border: 2px solid transparent; border-radius: 8px; cursor: pointer; opacity: 0.5; transition: 0.3s; margin: 0;}
+        .theme-btn.active { opacity: 1; transform: translateY(-2px); border-color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         
-        .theme-cyan { background: linear-gradient(45deg, #000, #0ff); border-color: #0ff; }
-        .theme-gold { background: linear-gradient(45deg, #000, #fd0); border-color: #fd0; }
-        .theme-crimson { background: linear-gradient(45deg, #222, #f00); border-color: #f00; }
-        .theme-deep { background: linear-gradient(45deg, #000, #80f); border-color: #80f; }
+        .theme-io26 { background: linear-gradient(45deg, #4285F4, #EA4335, #FBBC05, #34A853); }
+        .theme-cyan { background: linear-gradient(45deg, #001122, #00ffff); }
+        .theme-crimson { background: linear-gradient(45deg, #220000, #ff0055); }
+        .theme-gold { background: linear-gradient(45deg, #221100, #ffd700); }
         
-        /* LEADERBOARD */
-        .leaderboard-container { width: 100%; max-width: 300px; margin-top: 20px; max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.8); border: 2px solid #333; padding: 10px; border-radius: 4px; }
-        .leaderboard-item { display: flex; justify-content: space-between; font-size: 14px; color: #aaa; border-bottom: 1px solid #222; padding: 8px 0; font-family: monospace; }
-        .leaderboard-item:first-child { color: #ffd700; font-weight: bold; text-shadow: 0 0 5px #ffd700; }
-        .leader-name { flex: 1; text-align: left; text-transform: uppercase; }
-        .leader-score { width: 60px; text-align: right; }
+        /* LEADERBOARD LOCAL */
+        .leaderboard-container { width: 100%; max-width: 320px; margin-top: 10px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;}
+        .leaderboard-item { display: flex; justify-content: space-between; font-size: 14px; color: #ccc; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 10px 0; font-family: 'Orbitron', monospace; }
+        .leaderboard-item:last-child { border-bottom: none; }
+        .leaderboard-item:first-child { color: #FBBC05; font-weight: bold; text-shadow: 0 0 10px rgba(251, 188, 5, 0.5); }
         
-        #submitScoreArea { width: 100%; max-width: 300px; margin-bottom: 10px; display: flex; gap: 5px; }
-        #nameInput { background: #111; border: 2px solid #0ff; color: #0ff; padding: 10px; width: 60%; font-family: 'Orbitron'; text-transform: uppercase; text-align: center; letter-spacing: 3px; font-size: 18px; }
-        #submitScoreBtn { width: 40%; padding: 10px; font-size: 12px; margin-top: 0; border-color: #0f0; color: #0f0; }
-        
-        #startMenuContent { width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 50px; }
+        #submitScoreArea { width: 100%; max-width: 320px; display: flex; gap: 10px; margin-bottom: 20px; }
+        #nameInput { width: 60%; margin: 0; text-align: center; text-transform: uppercase; font-family: 'Orbitron'; font-size: 18px; letter-spacing: 4px;}
+        #submitScoreBtn { width: 40%; margin: 0; font-size: 12px; padding: 12px 10px;}
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    
     <div class="ui-layer">
-        <div class="score-display">SCORE: <span id="scoreEl">0</span></div>
-        <div class="hints"><span>&lt; IZQUIERDA</span><span>DERECHA &gt;</span></div>
+        <div class="score-display">IO SCORE: <span id="scoreEl">0</span></div>
+        <div class="hints"><span>&lt; Tap Izquierda</span><span>Tap Derecha &gt;</span></div>
     </div>
 
-    <!-- MENÚ INICIAL -->
+    <!-- MAIN MENU -->
     <div id="startMenu" class="menu-screen">
-        <div id="startMenuContent">
-            <h1>NEON<br><span>TRINITY</span></h1>
-            <div class="status-box" id="startMsg">SISTEMA: ONLINE.<br>Leaderboard Global Activado.</div>
-            
-            <div class="section-title">DISEÑO DE PISTA</div>
-            <div class="orbit-selector">
-                <button class="orbit-btn" id="orb2">2</button>
-                <button class="orbit-btn active" id="orb3">3</button>
-                <button class="orbit-btn" id="orb4">4</button>
-            </div>
-
-            <div class="section-title">FUENTE DE AUDIO</div>
-            <input type="file" id="fileInput" accept="audio/*">
-            <button id="loadBtn" class="file-btn">📁 CARGAR MP3</button>
-            
-            <input type="text" id="urlInput" placeholder="URL de Radio (Stream)...">
-            <button id="radioCustomBtn" class="radio-btn">🔗 CONECTAR URL</button>
-            <div style="display:flex; gap:5px; width:100%; max-width:300px;">
-                <button id="radio1Btn" class="radio-btn" style="flex:1;">📻 Gaming</button>
-                <button id="radio2Btn" class="radio-btn" style="flex:1;">📻 Phonk</button>
-                <button id="radio3Btn" class="radio-btn" style="flex:1; border-color:#f00; color:#f00;">📻 Bass+</button>
-            </div>
-
-            <button id="startBtn" style="margin-top: 20px; border-color: #fff; color: #fff;">JUGAR (SILENCIO)</button>
-            <button id="settingsBtn" class="settings-btn">⚙️ COLORES</button>
+        <h1>NEON<br><span>TRINITY '26</span></h1>
+        <div class="status-box" id="startMsg">SISTEMA: ONLINE.<br>IO Audio Engine Preparado.</div>
+        
+        <div class="section-title">ÓRBITAS ACTIVAS</div>
+        <div class="orbit-selector">
+            <button class="orbit-btn" id="orb2">2</button>
+            <button class="orbit-btn active" id="orb3">3</button>
+            <button class="orbit-btn" id="orb4">4</button>
         </div>
+
+        <div class="section-title">AUDIO REACTIVO (WEB AUDIO API)</div>
+        <input type="file" id="fileInput" accept="audio/*" style="display:none;">
+        <button id="loadBtn" class="btn-file">📁 CARGAR MP3 LOCAL</button>
+        
+        <div style="display:flex; gap:10px; width:100%; max-width:320px; margin-top: 10px;">
+            <button id="radio1Btn" class="btn-radio" style="flex:1;">📻 Gaming</button>
+            <button id="radio2Btn" class="btn-radio" style="flex:1;">📻 Phonk</button>
+            <button id="radio3Btn" class="btn-danger" style="flex:1;">📻 Bass+</button>
+        </div>
+
+        <button id="startBtn" class="btn-primary" style="margin-top: 30px; font-size: 16px; padding: 16px;">INICIAR SECUENCIA</button>
+        <button id="settingsBtn">⚙️ PERSONALIZAR</button>
     </div>
 
-    <!-- MENÚ CONFIGURACIÓN -->
+    <!-- SETTINGS MENU -->
     <div id="settingsMenu" class="menu-screen hidden">
-        <h2 style="color:#fff; margin-bottom: 30px;">PERSONALIZACIÓN</h2>
-        <div class="section-title">TEMA VISUAL</div>
+        <h1>ESTILO<br><span>VISUAL</span></h1>
+        
+        <div class="section-title" style="margin-top: 30px;">TEMA DE COLOR</div>
         <div class="theme-selector">
-            <div class="theme-btn theme-cyan active" data-theme="cyan"></div>
+            <div class="theme-btn theme-io26 active" data-theme="io26"></div>
+            <div class="theme-btn theme-cyan" data-theme="cyan"></div>
             <div class="theme-btn theme-crimson" data-theme="crimson"></div>
-            <div class="theme-btn theme-deep" data-theme="deep"></div>
             <div class="theme-btn theme-gold" data-theme="gold"></div>
         </div>
-        <button id="closeSettingsBtn" style="border-color: #fff; color: #fff; margin-top: 30px;">GUARDAR Y SALIR</button>
+        
+        <div class="section-title" style="margin-top: 10px;">RENDIMIENTO</div>
+        <button id="ldmBtn" class="btn-radio" style="margin-bottom: 20px;">LDM: DESACTIVADO</button>
+
+        <button id="closeSettingsBtn" class="btn-primary" style="margin-top: auto;">GUARDAR Y SALIR</button>
     </div>
 
-    <!-- MENÚ GAME OVER -->
+    <!-- GAME OVER MENU -->
     <div id="gameOverMenu" class="menu-screen hidden">
-        <h1 style="color: #f05; text-shadow: 0 0 20px #f05;">FIN DE<br><span style="color:#fff; font-size:20px;">PISTA</span></h1>
-        <div class="status-box" style="border-color: #f05; color: #fdd;" id="overMsg">Calculando...</div>
-        <div style="font-size: 20px; color: #fff; margin-bottom: 20px;">SCORE FINAL: <span id="finalScore">0</span></div>
+        <h1 style="color: #EA4335; text-shadow: 0 0 20px rgba(234, 67, 53, 0.5);">SISTEMA<br><span style="color:#fff;">CAÍDO</span></h1>
+        
+        <div style="font-size: 24px; color: #fff; margin: 10px 0 20px; font-family: 'Orbitron';">SCORE FINAL: <span id="finalScore" style="color: #FBBC05;">0</span></div>
         
         <div id="submitScoreArea">
-            <input type="text" id="nameInput" placeholder="AAA" maxlength="3">
-            <button id="submitScoreBtn">ENVIAR A GLOBAL</button>
+            <input type="text" id="nameInput" placeholder="DEV" maxlength="3">
+            <button id="submitScoreBtn" class="btn-primary">GUARDAR</button>
         </div>
 
-        <div class="section-title">TOP 10 MUNDIAL</div>
+        <div class="section-title">LEADERBOARD LOCAL (SESIÓN)</div>
         <div id="leaderboardList" class="leaderboard-container">
-            <div class="leaderboard-item"><span class="leader-name">Cargando...</span></div>
+            <!-- Items generados en JS -->
         </div>
         
-        <button id="changeMusicBtn" class="file-btn" style="font-size: 12px; padding: 10px; margin-top: 20px;">🎵 CAMBIAR MÚSICA</button>
-        <button id="restartBtn" style="border-color: #f05; color: #f05; box-shadow: 0 0 15px #f05;">REINTENTAR</button>
-        <button id="homeBtn" class="settings-btn">🏠 MENÚ PRINCIPAL</button>
+        <button id="restartBtn" class="btn-primary" style="margin-top: 10px;">REINTENTAR PISTA</button>
+        <button id="homeBtn">🏠 MENÚ PRINCIPAL</button>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- CLAVES DREAMLO ---
-            // NOTA: Estas son claves públicas de prueba. Para tu juego final,
-            // crea las tuyas gratis en dreamlo.com para que nadie te borre los récords.
-            const DREAMLO_PUBLIC = "692227188f40bb18643700dc"; 
-            const DREAMLO_PRIVATE = "TRiwuE9O6kOygeyvFBgXAwwscsGX2BVEGCYH_fF9EWNQ"; 
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d', { alpha: false }); 
             
-            const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
-            
-            const ui={
-                startMenu:document.getElementById('startMenu'),settingsMenu:document.getElementById('settingsMenu'),
-                gameOverMenu:document.getElementById('gameOverMenu'),
-                scoreEl:document.getElementById('scoreEl'),finalScoreEl:document.getElementById('finalScore'),
-                startMsg:document.getElementById('startMsg'),overMsg:document.getElementById('overMsg'),
-                startBtn:document.getElementById('startBtn'),restartBtn:document.getElementById('restartBtn'),
-                settingsBtn:document.getElementById('settingsBtn'),closeSettingsBtn:document.getElementById('closeSettingsBtn'),
-                homeBtn:document.getElementById('homeBtn'),
-                loadBtn:document.getElementById('loadBtn'),fileInput:document.getElementById('fileInput'),
-                changeMusicBtn:document.getElementById('changeMusicBtn'),
-                urlInput:document.getElementById('urlInput'),
-                radioCustomBtn:document.getElementById('radioCustomBtn'),
-                radio1Btn:document.getElementById('radio1Btn'),radio2Btn:document.getElementById('radio2Btn'),radio3Btn:document.getElementById('radio3Btn'),
+            const ui = {
+                startMenu: document.getElementById('startMenu'), settingsMenu: document.getElementById('settingsMenu'),
+                gameOverMenu: document.getElementById('gameOverMenu'), scoreEl: document.getElementById('scoreEl'),
+                finalScoreEl: document.getElementById('finalScore'), startMsg: document.getElementById('startMsg'),
+                startBtn: document.getElementById('startBtn'), restartBtn: document.getElementById('restartBtn'),
+                settingsBtn: document.getElementById('settingsBtn'), closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+                homeBtn: document.getElementById('homeBtn'), loadBtn: document.getElementById('loadBtn'),
+                fileInput: document.getElementById('fileInput'), radio1Btn: document.getElementById('radio1Btn'),
+                radio2Btn: document.getElementById('radio2Btn'), radio3Btn: document.getElementById('radio3Btn'),
                 orbBtns: [document.getElementById('orb2'), document.getElementById('orb3'), document.getElementById('orb4')],
-                themeBtns: document.querySelectorAll('.theme-btn'),
-                nameInput: document.getElementById('nameInput'),
-                submitScoreBtn: document.getElementById('submitScoreBtn'),
-                leaderboardList: document.getElementById('leaderboardList'),
-                submitScoreArea: document.getElementById('submitScoreArea')
+                themeBtns: document.querySelectorAll('.theme-btn'), nameInput: document.getElementById('nameInput'),
+                submitScoreBtn: document.getElementById('submitScoreBtn'), leaderboardList: document.getElementById('leaderboardList'),
+                submitScoreArea: document.getElementById('submitScoreArea'), ldmBtn: document.getElementById('ldmBtn')
             };
             
-            let gameState='MENU',score=0,frames=0,W,H,CX,CY;
+            let gameState = 'MENU', score = 0, frames = 0, W, H, CX, CY;
             let laneCount = 3;
-            let radii=[], baseRadii=[];
+            let radii = [], baseRadii = [];
+            let screenShake = 0; 
             
-            let config = { theme: 'cyan', colors: { player: '#00ffff', enemy: '#ff0055', jumper: '#ffaa00', coin: '#ffff00', shadow: '#00ffff' } };
-
             const THEMES = {
+                io26: { player: '#4285F4', enemy: '#EA4335', jumper: '#34A853', coin: '#FBBC05', shadow: '#4285F4' },
                 cyan: { player: '#00ffff', enemy: '#ff0055', jumper: '#ffaa00', coin: '#ffff00', shadow: '#00ffff' },
                 crimson: { player: '#ffffff', enemy: '#ff0000', jumper: '#ffaaaa', coin: '#ffffff', shadow: '#ff0000' },
-                deep: { player: '#00ffff', enemy: '#aa00ff', jumper: '#ff00ff', coin: '#00ffff', shadow: '#8800ff' },
                 gold: { player: '#ffd700', enemy: '#cccccc', jumper: '#ff4500', coin: '#ffd700', shadow: '#ffd700' }
             };
-            
-            const aiDb={intro:["Filtros listos.","Bajos aislados."],win:["Sincronía."],fail:["Fallo."]};
+            let config = { theme: 'io26', colors: THEMES['io26'], ldm: false };
+
+            const aiDb = {intro:["Filtros listos.", "Conexión a GCP establecida."], win:["Sincronía."], fail:["Kernel Panic.", "Excepción no controlada."]};
             const RADIOS = { gaming: "https://stream.zeno.fm/0r0xa792kwzuv", trap: "https://stream.zeno.fm/f3wvbbqmdg8uv", bass: "https://bassdrive.radioca.st/;" };
 
             // --- AUDIO ENGINE ---
-            const AudioContext=window.AudioContext||window.webkitAudioContext;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
             let actx, analyser, dataArray, sourceNode, audioEl, filterNode;
             let globalAudioBuffer = null;
-            let rawBass = 0, kickVisual = 0, beatDetected = false, isMusicLoaded = false;
-            let beatHeat = 0, volHistory = [], framesSinceSpawn = 0, pendingSpawn = false, flashValue = 0;
+            let kickVisual = 0, beatDetected = false, isMusicLoaded = false;
+            let beatHeat = 0, framesSinceSpawn = 0, pendingSpawn = false;
             let energyHistory = [], prevSpectrum = null;
-            const HISTORY_SIZE = 100;
             let lastBeatTime = 0;
 
             const audio = {
                 init: () => { if(!actx) actx = new AudioContext(); if(actx.state === 'suspended') actx.resume(); },
-                playSfx: (f, t, d) => {
+                playSfx: (f, t, d, vol=0.1) => {
                     if(!actx) return;
                     const o = actx.createOscillator(), g = actx.createGain();
-                    o.type = t; o.frequency.value = f;
-                    g.gain.value = 0.1;
+                    o.type = t; o.frequency.setValueAtTime(f, actx.currentTime);
+                    if(t==='sawtooth') o.frequency.exponentialRampToValueAtTime(f/2, actx.currentTime + d); 
+                    g.gain.setValueAtTime(vol, actx.currentTime);
                     g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + d);
                     o.connect(g); g.connect(actx.destination);
                     o.start(); o.stop(actx.currentTime + d);
                 },
-                jump: (u) => audio.playSfx(u ? 600 : 300, 'sine', 0.1),
-                coin: () => { audio.playSfx(1200, 'square', 0.05); setTimeout(() => audio.playSfx(1800, 'square', 0.1), 50); },
-                crash: () => audio.playSfx(100, 'sawtooth', 0.4),
+                jump: (u) => audio.playSfx(u ? 800 : 400, 'sine', 0.1, 0.05),
+                coin: () => { audio.playSfx(1200, 'square', 0.05, 0.05); setTimeout(() => audio.playSfx(1600, 'square', 0.1, 0.05), 50); },
+                crash: () => audio.playSfx(150, 'sawtooth', 0.5, 0.2),
                 reset: () => { 
                     if(sourceNode) { try{sourceNode.disconnect(); if(sourceNode.stop) sourceNode.stop();}catch(e){} }
                     if(audioEl) { audioEl.pause(); audioEl.src = ""; audioEl.remove(); audioEl = null; }
@@ -221,33 +215,30 @@
                     const reader = new FileReader();
                     reader.onload = function(ev) {
                         actx.decodeAudioData(ev.target.result, function(buffer) {
-                            globalAudioBuffer = buffer;
-                            isMusicLoaded = true;
-                            ui.loadBtn.innerText = "▶️ " + file.name.substring(0,10)+"...";
-                            ui.loadBtn.style.borderColor = config.colors.player; ui.loadBtn.style.color = config.colors.player;
-                            ui.startBtn.innerText = "JUGAR (MP3)";
-                            if(gameState === 'GAMEOVER') init();
-                        }, function(e){ ui.loadBtn.innerText = "ERROR"; });
+                            globalAudioBuffer = buffer; isMusicLoaded = true;
+                            ui.loadBtn.innerText = "▶️ " + file.name.substring(0,12)+"...";
+                            ui.loadBtn.style.color = config.colors.player; ui.loadBtn.style.borderColor = config.colors.player;
+                        }, () => { ui.loadBtn.innerText = "ERROR DE LECTURA"; });
                     };
                     reader.readAsArrayBuffer(file);
                 },
-                playRadio: (url) => {
-                    audio.init(); audio.reset();
-                    globalAudioBuffer = null; 
-                    ui.startMsg.innerText = "CONECTANDO STREAM...";
+                playRadio: (url, btn) => {
+                    audio.init(); audio.reset(); globalAudioBuffer = null; 
+                    ui.startMsg.innerText = "Haciendo fetch al stream...";
                     audioEl = new Audio(); audioEl.crossOrigin = "anonymous"; audioEl.src = url;
                     sourceNode = actx.createMediaElementSource(audioEl);
                     setupAudioGraph(sourceNode);
-                    audioEl.play().then(() => { isMusicLoaded = true; ui.startMsg.innerText = "RADIO CONECTADA 📡"; ui.startBtn.innerText = "JUGAR (EN VIVO)"; }).catch(e => { ui.startMsg.innerText = "ERROR STREAM."; });
+                    audioEl.play().then(() => { 
+                        isMusicLoaded = true; ui.startMsg.innerHTML = "STREAM CONECTADO 📡<br>Listo para jugar."; 
+                        document.querySelectorAll('.btn-radio, .btn-danger').forEach(b => b.style.opacity = 0.5);
+                        btn.style.opacity = 1;
+                    }).catch(e => { ui.startMsg.innerText = "ERROR CORS/STREAM."; });
                 },
                 startPlayback: () => { 
                     if (globalAudioBuffer) {
                         if (sourceNode) try { sourceNode.stop(); sourceNode.disconnect(); } catch(e) {}
-                        sourceNode = actx.createBufferSource();
-                        sourceNode.buffer = globalAudioBuffer;
-                        sourceNode.loop = true;
-                        setupAudioGraph(sourceNode);
-                        sourceNode.start(0);
+                        sourceNode = actx.createBufferSource(); sourceNode.buffer = globalAudioBuffer; sourceNode.loop = true;
+                        setupAudioGraph(sourceNode); sourceNode.start(0);
                     } else if (audioEl) { audioEl.play(); }
                 },
                 stopPlayback: () => { if(sourceNode && sourceNode.buffer) try{sourceNode.stop();}catch(e){} if(audioEl) audioEl.pause(); },
@@ -262,172 +253,175 @@
 
                     let flux = 0;
                     if (prevSpectrum) {
-                        for (let i = 0; i < 10; i++) {
+                        for (let i = 0; i < 15; i++) {
                             let diff = dataArray[i] - prevSpectrum[i];
                             if (diff > 0) flux += diff;
                         }
                     }
                     prevSpectrum = new Uint8Array(dataArray);
 
-                    const combinedScore = (rms * 0.3) + (flux * 0.7);
+                    const combinedScore = (rms * 0.4) + (flux * 0.6);
                     energyHistory.push(combinedScore);
-                    if (energyHistory.length > HISTORY_SIZE) energyHistory.shift();
+                    if (energyHistory.length > 100) energyHistory.shift();
 
                     const sortedHistory = [...energyHistory].sort((a, b) => a - b);
-                    const index85 = Math.floor(0.85 * sortedHistory.length);
-                    const threshold = Math.max(sortedHistory[index85] || 0, 40) * 1.1;
+                    const threshold = Math.max(sortedHistory[Math.floor(0.85 * sortedHistory.length)] || 0, 40) * 1.15;
 
-                    if (combinedScore > threshold && (now - lastBeatTime > 0.06)) {
-                        beatDetected = true; lastBeatTime = now; beatHeat = Math.min(beatHeat + 0.15, 0.7);
+                    if (combinedScore > threshold && (now - lastBeatTime > 0.08)) {
+                        beatDetected = true; lastBeatTime = now; beatHeat = Math.min(beatHeat + 0.2, 0.8);
+                        screenShake = Math.min(screenShake + 2, 8); 
                     } else { beatDetected = false; }
                     
-                    beatHeat *= 0.94;
+                    beatHeat *= 0.92;
                     const targetVisual = Math.min(rms / 200, 1.0); 
-                    kickVisual += (targetVisual - kickVisual) * 0.2;
+                    kickVisual += (targetVisual - kickVisual) * 0.3;
                 }
             };
 
             function setupAudioGraph(source) {
-                filterNode = actx.createBiquadFilter();
-                filterNode.type = "lowpass";
-                filterNode.frequency.value = 150;
-                analyser = actx.createAnalyser(); 
-                analyser.fftSize = 256;
-                source.connect(filterNode);
-                filterNode.connect(analyser);
-                source.connect(actx.destination);
+                filterNode = actx.createBiquadFilter(); filterNode.type = "lowpass"; filterNode.frequency.value = 200;
+                analyser = actx.createAnalyser(); analyser.fftSize = 256;
+                source.connect(filterNode); filterNode.connect(analyser); source.connect(actx.destination);
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
             }
 
-            // --- DREAMLO LEADERBOARD (CON PROXY) ---
-            // Usamos proxy para leer y escribir para evitar CORS en navegadores estrictos
-            async function loadLeaderboard() {
-                ui.leaderboardList.innerHTML = '<div class="leaderboard-item">Cargando Global...</div>';
-                // Proxy gratuito para saltar CORS
-                const proxy = "https://api.allorigins.win/get?url=";
-                const dreamloUrl = encodeURIComponent(`http://dreamlo.com/lb/${DREAMLO_PUBLIC}/json`);
-
-                try {
-                    const response = await fetch(proxy + dreamloUrl);
-                    const data = await response.json();
-                    
-                    // AllOrigins devuelve el contenido como string en .contents
-                    let json;
-                    try {
-                        json = JSON.parse(data.contents);
-                    } catch(e) {
-                        // Si falla, puede que dreamlo esté vacío o devuelva algo no-json
-                        json = {}; 
-                    }
-                    
-                    const scores = json.dreamlo?.leaderboard?.entry || [];
-                    const list = Array.isArray(scores) ? scores : (scores ? [scores] : []);
-                    
-                    ui.leaderboardList.innerHTML = '';
-                    if (list.length === 0) {
-                        ui.leaderboardList.innerHTML = '<div class="leaderboard-item">Sé el primero.</div>';
-                    } else {
-                        list.slice(0, 10).forEach((s, i) => {
-                            const div = document.createElement('div');
-                            div.className = 'leaderboard-item';
-                            div.innerHTML = `<span class="leader-name">${i+1}. ${s.name}</span><span class="leader-score">${s.score}</span>`;
-                            ui.leaderboardList.appendChild(div);
-                        });
-                    }
-                } catch (e) {
-                    console.warn("Proxy Error", e);
-                    ui.leaderboardList.innerHTML = '<div class="leaderboard-item">Error de Conexión</div>';
+            // --- LOCAL LEADERBOARD ---
+            let localScores = JSON.parse(localStorage.getItem('io_scores')) || [];
+            
+            function loadLeaderboard() {
+                ui.leaderboardList.innerHTML = '';
+                localScores.sort((a, b) => b.score - a.score);
+                if (localScores.length === 0) {
+                    ui.leaderboardList.innerHTML = '<div class="leaderboard-item" style="justify-content:center;">Sin registros aún.</div>';
+                } else {
+                    localScores.slice(0, 5).forEach((s, i) => {
+                        const div = document.createElement('div');
+                        div.className = 'leaderboard-item';
+                        div.innerHTML = `<span>${i+1}. ${s.name}</span><span>${s.score}</span>`;
+                        ui.leaderboardList.appendChild(div);
+                    });
                 }
             }
 
-            async function saveScore() {
-                const name = ui.nameInput.value.toUpperCase().substring(0, 3).replace(/[^A-Z0-9]/g, '') || "UNK";
+            function saveScore() {
+                const name = ui.nameInput.value.toUpperCase().substring(0, 3).replace(/[^A-Z0-9]/g, '') || "DEV";
                 if(score <= 0) return;
                 
+                localScores.push({name, score});
+                localStorage.setItem('io_scores', JSON.stringify(localScores));
+                
+                ui.submitScoreBtn.innerText = "¡GUARDADO!";
                 ui.submitScoreBtn.disabled = true;
-                ui.submitScoreBtn.innerText = "...";
-                
-                // Para guardar, también usamos el proxy para asegurar el retorno
-                const addUrl = `http://dreamlo.com/lb/${DREAMLO_PRIVATE}/add/${name}/${score}`;
-                const proxy = "https://api.allorigins.win/get?url=";
-                
-                try {
-                    await fetch(proxy + encodeURIComponent(addUrl));
-                    ui.submitScoreBtn.innerText = "¡HECHO!";
-                    setTimeout(() => {
-                        ui.submitScoreArea.style.display = 'none';
-                        loadLeaderboard();
-                    }, 1000);
-                } catch (e) {
-                    console.error("Error saving", e);
-                    ui.submitScoreBtn.innerText = "REINTENTAR";
-                    ui.submitScoreBtn.disabled = false;
-                }
+                ui.submitScoreBtn.style.background = "#34A853";
+                setTimeout(() => {
+                    ui.submitScoreArea.style.display = 'none';
+                    loadLeaderboard();
+                }, 1000);
             }
 
-            // --- CORE GAME FUNCTIONS ---
             function loadConfig() {
-                const saved = localStorage.getItem('neonConfig');
-                if(saved) { const parsed = JSON.parse(saved); config.theme = parsed.theme || 'cyan'; }
+                const saved = localStorage.getItem('neonConfigIO');
+                if(saved) { const parsed = JSON.parse(saved); config.theme = parsed.theme || 'io26'; config.ldm = !!parsed.ldm; }
                 applyTheme(config.theme);
+                updateLdmUI();
             }
-            function saveConfig() { localStorage.setItem('neonConfig', JSON.stringify({ theme: config.theme })); }
+            function saveConfig() { localStorage.setItem('neonConfigIO', JSON.stringify({ theme: config.theme, ldm: config.ldm })); }
+            
             function applyTheme(name) {
                 config.theme = name; config.colors = THEMES[name];
                 ui.themeBtns.forEach(btn => { btn.classList.remove('active'); if(btn.dataset.theme === name) btn.classList.add('active'); });
-                document.querySelector('h1').style.color = config.colors.player; document.querySelector('h1 span').style.color = config.colors.enemy;
-                ui.loadBtn.style.borderColor = config.colors.player; ui.loadBtn.style.color = config.colors.player;
+                document.documentElement.style.setProperty('--player-color', config.colors.player);
+            }
+
+            function updateLdmUI() {
+                ui.ldmBtn.innerText = config.ldm ? "LDM: ACTIVADO (RÁPIDO)" : "LDM: DESACTIVADO (HERMOSO)";
+                ui.ldmBtn.style.borderColor = config.ldm ? "#FBBC05" : "#34A853";
+                ui.ldmBtn.style.color = config.ldm ? "#FBBC05" : "#34A853";
             }
 
             function updateRadii() {
-                W=canvas.width; H=canvas.height; CX=W/2; CY=H/2;
+                W = canvas.width; H = canvas.height; CX = W/2; CY = H/2;
                 const m = Math.min(W,H); baseRadii = [];
-                const startR = m * 0.18; const space = (m * 0.45 - startR) / (laneCount - 1 || 1); 
+                const startR = m * 0.15; const space = (m * 0.40 - startR) / (laneCount - 1 || 1); 
                 for(let i=0; i<laneCount; i++) baseRadii.push(startR + (i * space));
                 radii = [...baseRadii];
             }
             function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; updateRadii(); }
-            window.addEventListener('resize',resize);resize();
+            window.addEventListener('resize',resize); resize();
 
-            class Player{constructor(){this.angle=0;this.lane= Math.floor(laneCount / 2); this.currR=radii[this.lane];this.trail=[];this.rotationSpeed=0.04;}update(){this.rotationSpeed=0.04+(score*0.00005);this.angle+=this.rotationSpeed;const targetR = radii[this.lane];this.currR += (targetR - this.currR) * 0.18;this.x=CX+Math.cos(this.angle)*this.currR;this.y=CY+Math.sin(this.angle)*this.currR;this.trail.push({x:this.x,y:this.y});if(this.trail.length>12)this.trail.shift();}move(d){const old=this.lane;this.lane+=d;if(this.lane < 0) this.lane = 0;if(this.lane >= laneCount) this.lane = laneCount - 1;if(this.lane!==old)audio.jump(d>0);}draw(){ctx.strokeStyle=config.colors.player;ctx.lineWidth=4;ctx.lineCap='round';ctx.beginPath();this.trail.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(this.x,this.y,6,0,Math.PI*2);ctx.fill();}}
+            class Player {
+                constructor(){ this.angle=0; this.lane= Math.floor(laneCount / 2); this.currR=radii[this.lane]; this.trail=[]; this.rotationSpeed=0.035; }
+                update(){
+                    this.rotationSpeed=0.035+(score*0.00004);
+                    this.angle+=this.rotationSpeed;
+                    const targetR = radii[this.lane];
+                    this.currR += (targetR - this.currR) * 0.25;
+                    this.x=CX+Math.cos(this.angle)*this.currR;
+                    this.y=CY+Math.sin(this.angle)*this.currR;
+                    this.trail.push({x:this.x,y:this.y});
+                    if(this.trail.length>10) this.trail.shift();
+                }
+                move(d){
+                    const old=this.lane; this.lane+=d;
+                    if(this.lane < 0) this.lane = 0; if(this.lane >= laneCount) this.lane = laneCount - 1;
+                    if(this.lane!==old) { audio.jump(d>0); createParticles(this.x, this.y, config.colors.player, 3); }
+                }
+                draw(){
+                    ctx.strokeStyle=config.colors.player; ctx.lineWidth=5; ctx.lineCap='round'; ctx.lineJoin='round';
+                    ctx.beginPath();
+                    this.trail.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+                    ctx.stroke();
+                    
+                    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle + Math.PI/2);
+                    ctx.fillStyle='#fff'; ctx.beginPath();
+                    ctx.moveTo(0, -8); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
+                    ctx.fill(); ctx.restore();
+                }
+            }
             
-            let player,obstacles=[],coins=[],particles=[],lastEnemyLane=-1;
+            let player, obstacles=[], coins=[], particles=[], lastEnemyLane=-1;
 
             function init(){
-                if(isMusicLoaded) audio.startPlayback(); else audio.init();
-                score=0;frames=0;framesSinceSpawn=0;lastEnemyLane=-1;
-                ui.scoreEl.innerText=0;player=new Player();obstacles=[];coins=[];particles=[];
-                gameState='PLAYING'; ui.startMenu.classList.add('hidden');ui.gameOverMenu.classList.add('hidden');
+                audio.init(); 
+                if(isMusicLoaded) audio.startPlayback();
+                score=0; frames=0; framesSinceSpawn=0; lastEnemyLane=-1; screenShake=0;
+                ui.scoreEl.innerText=0; player=new Player(); obstacles=[]; coins=[]; particles=[];
+                gameState='PLAYING'; 
+                ui.startMenu.classList.add('hidden'); ui.gameOverMenu.classList.add('hidden');
                 loop();
             }
             
             function checkSpawn(){
-                const MIN_RATE = 60, START_RATE = 130;
+                const MIN_RATE = 50, START_RATE = 120;
                 const targetRate = Math.max(MIN_RATE, START_RATE - Math.floor(score/2));
                 framesSinceSpawn++;
                 if (framesSinceSpawn > targetRate) pendingSpawn = true;
                 let doSpawn = false;
                 if (pendingSpawn) {
-                    if (isMusicLoaded) { if (beatDetected || framesSinceSpawn > targetRate + 40) doSpawn = true; } else { doSpawn = true; }
+                    if (isMusicLoaded) { if (beatDetected || framesSinceSpawn > targetRate + 30) doSpawn = true; } 
+                    else { doSpawn = true; }
                 }
                 if (doSpawn) { spawnEnemy(); framesSinceSpawn = 0; pendingSpawn = false; }
             }
 
             function spawnEnemy() {
-                const TRAVEL_TIME_FRAMES = 90; 
+                const TRAVEL_TIME_FRAMES = 80; 
                 const travelDistance = player.rotationSpeed * TRAVEL_TIME_FRAMES;
                 const targetAngle = player.angle + travelDistance;
                 if(coins.some(c => Math.abs(c.angle - targetAngle) < 0.5)) return;
+                
                 let lane=Math.floor(Math.random() * laneCount); 
-                if(lastEnemyLane!==-1 && laneCount > 1){ if(Math.random() < 0.6) { while(lane === lastEnemyLane) lane=Math.floor(Math.random() * laneCount); } }
+                if(lastEnemyLane!==-1 && laneCount > 1 && Math.random() < 0.6) { 
+                    while(lane === lastEnemyLane) lane=Math.floor(Math.random() * laneCount); 
+                }
                 lastEnemyLane=lane;
-                const isJumper = (score > 5) && (Math.random() < 0.25) && (laneCount > 1);
+                const isJumper = (score > 10) && (Math.random() < 0.3) && (laneCount > 1);
                 obstacles.push({ angle: targetAngle, lane: lane, currentRadius: radii[lane], active: true, jumpTimer: 0, isJumper: isJumper, originalLane: lane, jumpPhase: 0 });
             }
 
             function manageCoins(){
-                if(coins.length===0){
-                    const spawnAngle=player.angle+(Math.PI * 1.3);
+                if(coins.length===0 && Math.random() < 0.05){ 
+                    const spawnAngle=player.angle+(Math.PI * 1.5);
                     const lanes = Array.from({length: laneCount}, (_, i) => i).sort(()=>Math.random()-0.5);
                     for(let lane of lanes){
                         const busy=obstacles.some(o=>o.active&&Math.abs(o.angle-spawnAngle)<0.5&&o.lane===lane);
@@ -441,125 +435,214 @@
                 frames++;
                 if(isMusicLoaded) audio.analyze();
                 
+                screenShake *= 0.9; 
                 beatHeat *= 0.94;
-                const expansion = kickVisual * 12; 
+                const expansion = kickVisual * 15; 
                 radii = baseRadii.map(r => r + expansion);
 
                 player.update(); checkSpawn(); manageCoins();
+                
                 obstacles.forEach(o => {
                     if(!o.active) return;
                     if(o.isJumper && beatDetected && isMusicLoaded && o.jumpTimer === 0){
-                        if(o.jumpPhase === 0 && Math.random() < 0.5) { 
+                        if(o.jumpPhase === 0 && Math.random() < 0.6) { 
                             const possibleLanes = [];
                             if(o.lane > 0) possibleLanes.push(o.lane - 1);
                             if(o.lane < laneCount - 1) possibleLanes.push(o.lane + 1);
                             if(possibleLanes.length > 0) {
                                 o.lane = possibleLanes[Math.floor(Math.random() * possibleLanes.length)];
                                 const ex=CX+Math.cos(o.angle)*o.currentRadius, ey=CY+Math.sin(o.angle)*o.currentRadius;
-                                createParticles(ex, ey, config.colors.jumper); 
-                                o.jumpPhase = 1; o.jumpTimer = 15; 
+                                createParticles(ex, ey, config.colors.jumper, 5); 
+                                o.jumpPhase = 1; o.jumpTimer = 10; 
                             }
                         } else if(o.jumpPhase === 1) { 
                             o.lane = o.originalLane;
                             const ex=CX+Math.cos(o.angle)*o.currentRadius, ey=CY+Math.sin(o.angle)*o.currentRadius;
-                            createParticles(ex, ey, config.colors.jumper); 
+                            createParticles(ex, ey, config.colors.jumper, 5); 
                             o.jumpPhase = 2; o.jumpTimer = 999;
                         }
                     }
                     if(o.jumpTimer > 0) o.jumpTimer--;
-                    const targetR = radii[o.lane];
-                    o.currentRadius += (targetR - o.currentRadius) * 0.2;
+                    o.currentRadius += (radii[o.lane] - o.currentRadius) * 0.3; 
                 });
-                const SAFE_ZONE=Math.PI*2; obstacles=obstacles.filter(e=>e.active&&(e.angle>player.angle-SAFE_ZONE));
+                
+                const SAFE_ZONE=Math.PI*2; 
+                obstacles=obstacles.filter(e=>e.active&&(e.angle>player.angle-SAFE_ZONE));
+                
                 const checkHit=(e,isCoin)=>{
                     const r = isCoin ? radii[e.lane] : e.currentRadius; 
                     const ex=CX+Math.cos(e.angle)*r,ey=CY+Math.sin(e.angle)*r,dist=Math.hypot(player.x-ex,player.y-ey);
-                    if(dist<20){
+                    if(dist<22){ 
                         if(isCoin){
-                            score+=1;ui.scoreEl.innerText=score;audio.coin();createParticles(ex,ey,config.colors.coin);
+                            score+=5; ui.scoreEl.innerText=score; audio.coin(); 
+                            createParticles(ex,ey,config.colors.coin, 12);
                             const idx=coins.indexOf(e);if(idx>-1)coins.splice(idx,1);
                         }else{
-                            audio.crash();createParticles(ex,ey, e.isJumper ? config.colors.jumper : config.colors.enemy);gameOver();e.active=false;
+                            audio.crash(); 
+                            screenShake = 25; 
+                            createParticles(ex,ey, e.isJumper ? config.colors.jumper : config.colors.enemy, 30); 
+                            gameOver(); e.active=false;
                         }
                     }
                 };
-                obstacles.forEach(o=>checkHit(o,false));coins.forEach(c=>checkHit(c,true));
-                particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=0.05;});particles=particles.filter(p=>p.life>0);
+                obstacles.forEach(o=>checkHit(o,false)); coins.forEach(c=>checkHit(c,true));
+                
+                particles.forEach(p=>{
+                    p.vx *= 0.95; p.vy *= 0.95; 
+                    p.x+=p.vx; p.y+=p.vy; p.life-=0.03;
+                });
+                particles=particles.filter(p=>p.life>0);
             }
             
-            function createParticles(x,y,color){for(let i=0;i<8;i++)particles.push({x,y,color,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,life:1});}
+            function createParticles(x,y,color, count=8){
+                if (config.ldm) count = Math.ceil(count / 4);
+                for(let i=0;i<count;i++){
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 6 + 2;
+                    particles.push({x, y, color, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 1});
+                }
+            }
             
             function draw(){
-                ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
-                if (gameState === 'PLAYING' && beatHeat > 0.05) {
-                    const alpha = Math.min(beatHeat * 0.3, 0.3);
-                    ctx.fillStyle = `rgba(225, 250, 255, ${alpha})`; 
+                ctx.fillStyle = '#050510'; ctx.fillRect(0,0,W,H);
+                
+                ctx.save();
+                if(screenShake > 0.5 && !config.ldm) {
+                    ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+                }
+
+                if (gameState === 'PLAYING' && beatHeat > 0.1 && !config.ldm) {
+                    ctx.fillStyle = `rgba(66, 133, 244, ${beatHeat * 0.15})`; 
                     ctx.fillRect(0,0,W,H);
                 }
-                if(isMusicLoaded) {
-                    const coreSize = 15 + (kickVisual * 20); 
-                    const coreAlpha = 0.3 + (kickVisual * 0.5);
-                    const grd = ctx.createRadialGradient(CX, CY, 5, CX, CY, coreSize * 3);
-                    grd.addColorStop(0, config.colors.player);
-                    grd.addColorStop(1, "rgba(0,0,0,0)");
-                    ctx.globalAlpha = coreAlpha; ctx.fillStyle = grd;
-                    ctx.beginPath(); ctx.arc(CX, CY, coreSize * 3, 0, Math.PI*2); ctx.fill();
-                    ctx.globalAlpha = 1; ctx.fillStyle = '#fff';
-                    ctx.beginPath(); ctx.arc(CX, CY, coreSize * 0.8, 0, Math.PI*2); ctx.fill();
+
+                if(isMusicLoaded && analyser) {
+                    const coreSize = 20 + (kickVisual * 25); 
+                    
+                    const bars = 32;
+                    const step = Math.PI * 2 / bars;
+                    ctx.lineWidth = 3;
+                    for(let i=0; i<bars; i++) {
+                        const val = dataArray[i*2] / 255.0; 
+                        const barLength = val * 60;
+                        const a = step * i + frames*0.01;
+                        ctx.strokeStyle = `hsla(${120 + val*100}, 100%, 50%, ${val})`; 
+                        ctx.beginPath();
+                        ctx.moveTo(CX + Math.cos(a)*coreSize, CY + Math.sin(a)*coreSize);
+                        ctx.lineTo(CX + Math.cos(a)*(coreSize + barLength), CY + Math.sin(a)*(coreSize + barLength));
+                        ctx.stroke();
+                    }
+
+                    if (!config.ldm) {
+                        const grd = ctx.createRadialGradient(CX, CY, 0, CX, CY, coreSize*2);
+                        grd.addColorStop(0, config.colors.player);
+                        grd.addColorStop(1, "rgba(0,0,0,0)");
+                        ctx.fillStyle = grd;
+                        ctx.beginPath(); ctx.arc(CX, CY, coreSize*2, 0, Math.PI*2); ctx.fill();
+                    }
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath(); ctx.arc(CX, CY, coreSize * 0.6, 0, Math.PI*2); ctx.fill();
                 }
+
                 ctx.lineWidth=2;
                 radii.forEach((r,i)=>{
                     ctx.beginPath();ctx.arc(CX,CY,r,0,Math.PI*2);
-                    const glow = 0.3 + (kickVisual * 0.5); 
+                    const glow = 0.2 + (kickVisual * 0.3); 
                     ctx.strokeStyle = config.colors.shadow;
-                    ctx.shadowBlur = kickVisual * 10; ctx.shadowColor = config.colors.shadow;
-                    ctx.globalAlpha = glow; ctx.stroke(); ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+                    if (!config.ldm) { ctx.shadowBlur = kickVisual * 15; ctx.shadowColor = config.colors.shadow; }
+                    ctx.globalAlpha = glow; 
+                    if(player && i === player.lane) ctx.setLineDash([10, 10]); else ctx.setLineDash([]); 
+                    ctx.stroke(); 
+                    ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.setLineDash([]);
                 });
-                if(gameState==='PLAYING'){
-                    coins.forEach(c=>{const r=radii[c.lane],ex=CX+Math.cos(c.angle)*r,ey=CY+Math.sin(c.angle)*r;ctx.fillStyle=config.colors.coin;ctx.shadowBlur=15+(kickVisual*15);ctx.shadowColor=config.colors.coin;ctx.beginPath();ctx.arc(ex,ey,6+(kickVisual*3),0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;});
-                    obstacles.forEach(o=>{if(!o.active)return;
-                        const r=o.currentRadius; 
-                        const ex=CX+Math.cos(o.angle)*r,ey=CY+Math.sin(o.angle)*r;
-                        const enemyGlow = 15 + (kickVisual * 30);
-                        const color = o.isJumper ? config.colors.jumper : config.colors.enemy;
-                        ctx.fillStyle = color; ctx.shadowBlur = enemyGlow; ctx.shadowColor = color;
-                        ctx.beginPath();ctx.save();ctx.translate(ex,ey);ctx.rotate(o.angle+Math.PI/4);
-                        const s = 12 + (kickVisual * 6); ctx.rect(-s/2,-s/2,s,s);
-                        ctx.restore();ctx.fill();ctx.shadowBlur = 0;
+
+                if(gameState==='PLAYING' || gameState === 'GAMEOVER'){
+                    coins.forEach(c=>{
+                        const r=radii[c.lane], ex=CX+Math.cos(c.angle)*r, ey=CY+Math.sin(c.angle)*r;
+                        ctx.fillStyle=config.colors.coin;
+                        if (!config.ldm) { ctx.shadowBlur=15; ctx.shadowColor=config.colors.coin; }
+                        ctx.beginPath(); ctx.arc(ex,ey,6+(kickVisual*2),0,Math.PI*2); ctx.fill(); 
+                        ctx.shadowBlur=0;
+                        if (!config.ldm) {
+                            ctx.strokeStyle=config.colors.coin; ctx.lineWidth=1;
+                            ctx.beginPath(); ctx.arc(ex,ey,10+(Math.sin(frames*0.1)*3),0,Math.PI*2); ctx.stroke();
+                        }
                     });
-                    ctx.shadowBlur=20;ctx.shadowColor=config.colors.player;player.draw();ctx.shadowBlur=0;
-                    particles.forEach(p=>{ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+                    
+                    obstacles.forEach(o=>{
+                        if(!o.active)return;
+                        const r=o.currentRadius; 
+                        const ex=CX+Math.cos(o.angle)*r, ey=CY+Math.sin(o.angle)*r;
+                        const color = o.isJumper ? config.colors.jumper : config.colors.enemy;
+                        
+                        ctx.fillStyle = color; 
+                        if (!config.ldm) { ctx.shadowBlur = 10 + (kickVisual * 10); ctx.shadowColor = color; }
+                        ctx.beginPath(); ctx.save(); ctx.translate(ex,ey); ctx.rotate(o.angle+Math.PI/4 + (frames*0.05)); 
+                        
+                        if(o.isJumper) {
+                            const s = 14;
+                            ctx.moveTo(0, -s); ctx.lineTo(s, s); ctx.lineTo(-s, s); ctx.closePath();
+                        } else {
+                            const s = 12 + (kickVisual * 4); ctx.rect(-s,-s,s*2,s*2);
+                        }
+                        ctx.restore(); ctx.fill(); ctx.shadowBlur = 0;
+                    });
+                    
+                    if(gameState === 'PLAYING') {
+                        if (!config.ldm) { ctx.shadowBlur=15; ctx.shadowColor=config.colors.player; }
+                        player.draw(); 
+                        ctx.shadowBlur=0;
+                    }
+                    
+                    if (!config.ldm) ctx.globalCompositeOperation = 'lighter';
+                    particles.forEach(p=>{
+                        ctx.fillStyle=p.color; ctx.globalAlpha=p.life;
+                        ctx.beginPath(); ctx.arc(p.x,p.y,3 + (p.life*2),0,Math.PI*2); ctx.fill();
+                    });
+                    ctx.globalAlpha=1;
+                    if (!config.ldm) ctx.globalCompositeOperation = 'source-over';
                 }
+                
+                ctx.restore(); 
             }
             
             function gameOver(){
                 gameState='GAMEOVER';
                 audio.stopPlayback();
                 ui.finalScoreEl.innerText=score;
-                ui.overMsg.innerText=aiDb.fail[Math.floor(Math.random()*aiDb.fail.length)];
                 ui.gameOverMenu.classList.remove('hidden');
                 ui.submitScoreArea.style.display = 'flex';
                 ui.submitScoreBtn.disabled = false;
-                ui.submitScoreBtn.innerText = "ENVIAR A GLOBAL";
+                ui.submitScoreBtn.innerText = "GUARDAR";
+                ui.submitScoreBtn.style.background = "#4285F4";
                 loadLeaderboard();
             }
             
-            function loop(){if(gameState==='PLAYING')requestAnimationFrame(loop);update();draw();}
-            function handleInput(x){if(gameState!=='PLAYING')return; if(!isMusicLoaded) audio.init(); if(x<W/2)player.move(-1);else player.move(1);}
+            function loop(){ if(gameState==='PLAYING' || particles.length > 0) requestAnimationFrame(loop); update(); draw(); }
             
-            window.addEventListener('mousedown',e=>handleInput(e.clientX));
-            window.addEventListener('touchstart',e=>{if(e.target.tagName==='BUTTON'||e.target.tagName==='INPUT')return;e.preventDefault();handleInput(e.changedTouches[0].clientX);},{passive:false});
+            window.addEventListener('keydown', (e) => {
+                if(gameState!=='PLAYING') return;
+                if(!isMusicLoaded) audio.init();
+                if(e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') player.move(-1);
+                if(e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') player.move(1);
+            });
+
+            function handleInput(x){ if(gameState!=='PLAYING')return; if(!isMusicLoaded) audio.init(); if(x<W/2)player.move(-1);else player.move(1); }
+            window.addEventListener('mousedown',e=> { if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleInput(e.clientX); });
+            window.addEventListener('touchstart',e=>{
+                if(e.target.tagName==='BUTTON'||e.target.tagName==='INPUT'||e.target.closest('.leaderboard-container'))return;
+                e.preventDefault(); handleInput(e.changedTouches[0].clientX);
+            },{passive:false});
             
-            const bind = (el, fn) => { if(el) { el.addEventListener('click', (e)=>{e.stopPropagation();fn();}); el.addEventListener('touchstart', (e)=>{e.stopPropagation();e.preventDefault();fn();}); } };
+            const bind = (el, fn) => { if(el) { el.addEventListener('click', (e)=>{e.stopPropagation();fn();}); } };
 
             bind(ui.loadBtn, () => ui.fileInput.click());
             ui.fileInput.addEventListener('change', audio.handleFileSelect);
-            bind(ui.changeMusicBtn, () => ui.fileInput.click());
             
-            bind(ui.radioCustomBtn, () => { const url = ui.urlInput.value.trim(); if(url) audio.playRadio(url); });
-            bind(ui.radio1Btn, () => audio.playRadio(RADIOS.gaming));
-            bind(ui.radio2Btn, () => audio.playRadio(RADIOS.trap));
-            bind(ui.radio3Btn, () => audio.playRadio(RADIOS.bass));
+            bind(ui.radio1Btn, (e) => audio.playRadio(RADIOS.gaming, ui.radio1Btn));
+            bind(ui.radio2Btn, (e) => audio.playRadio(RADIOS.trap, ui.radio2Btn));
+            bind(ui.radio3Btn, (e) => audio.playRadio(RADIOS.bass, ui.radio3Btn));
 
             bind(ui.startBtn, init);
             bind(ui.restartBtn, init);
@@ -567,15 +650,18 @@
             bind(ui.settingsBtn, () => ui.settingsMenu.classList.remove('hidden'));
             bind(ui.closeSettingsBtn, () => { saveConfig(); ui.settingsMenu.classList.add('hidden'); });
             
+            bind(ui.ldmBtn, () => { config.ldm = !config.ldm; updateLdmUI(); draw(); });
+
             bind(ui.submitScoreBtn, saveScore);
 
             ui.orbBtns.forEach((btn, index) => {
-                bind(btn, () => { ui.orbBtns.forEach(b => b.classList.remove('active')); btn.classList.add('active'); laneCount = index + 2; updateRadii(); });
+                bind(btn, () => { ui.orbBtns.forEach(b => b.classList.remove('active')); btn.classList.add('active'); laneCount = index + 2; updateRadii(); draw(); });
             });
 
-            ui.themeBtns.forEach(btn => { bind(btn, () => applyTheme(btn.dataset.theme)); });
+            ui.themeBtns.forEach(btn => { bind(btn, () => { applyTheme(btn.dataset.theme); draw(); }); });
 
-            loadConfig(); ui.startMsg.innerHTML="SISTEMA: ONLINE.<br>"+aiDb.intro[Math.floor(Math.random()*aiDb.intro.length)]; updateRadii(); draw();
+            loadConfig(); 
+            updateRadii(); draw(); 
         });
     </script>
 </body>
