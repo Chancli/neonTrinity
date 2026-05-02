@@ -353,9 +353,13 @@
                 filterNode = actx.createBiquadFilter(); filterNode.type = "lowpass"; filterNode.frequency.value = 200;
                 analyser = actx.createAnalyser(); analyser.fftSize = 256;
                 
+                // Ruta limpia: La música va directa al control de volumen maestro para que la escuches clara
+                source.connect(masterGain); 
+                
+                // Ruta de análisis: Se copia la señal al filtro de bajos en secreto para detectar el ritmo
                 source.connect(filterNode); 
                 filterNode.connect(analyser); 
-                analyser.connect(masterGain); 
+                
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
             }
 
@@ -772,6 +776,7 @@
                 if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleTouchScreen(e.clientX); 
             });
             window.addEventListener('touchstart',e=>{
+                if(gameState !== 'PLAYING') return; // Permite interactuar libremente con los menús en móviles
                 if(e.target.tagName==='BUTTON'||e.target.tagName==='INPUT'||e.target.closest('.leaderboard-container')||e.target.closest('.floating-vol')) return;
                 e.preventDefault(); handleTouchScreen(e.changedTouches[0].clientX);
             },{passive:false});
