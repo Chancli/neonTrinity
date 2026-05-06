@@ -24,10 +24,10 @@
         .score-display { color: #fff; font-size: 32px; text-shadow: 0 0 15px var(--primary); font-family: 'Orbitron', sans-serif; font-weight: bold; margin-top: 40px; transition: text-shadow 0.3s;}
         .hints { display: flex; justify-content: space-between; width: 100%; color: rgba(255, 255, 255, 0.4); font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 2px;}
         
-        /* HUD BPM */
-        .bpm-display { position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 20px; color: var(--primary); font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.5s; }
+        /* HUD RÍTMO */
+        .beat-display { position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 20px; color: var(--danger); font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.5s; font-weight: bold; }
 
-        /* CONTROL DE VOLUMEN FLOTANTE (CANVAS) */
+        /* CONTROL DE VOLUMEN FLOTANTE */
         .floating-vol { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; z-index: 1000; display: flex; align-items: center; gap: 10px; pointer-events: auto; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
         .floating-vol span { font-size: 14px; color: #fff; }
         input[type="range"] { -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.3); height: 4px; border-radius: 2px; outline: none; width: 80px; cursor: pointer; touch-action: auto; }
@@ -102,12 +102,12 @@
         <div class="hints"><span>&lt; Mitad Izquierda</span><span>Mitad Derecha &gt;</span></div>
     </div>
     
-    <div class="bpm-display" id="bpmHUD">BPM: --</div>
+    <div class="beat-display" id="beatHUD">KICK DETECTED</div>
 
     <!-- MAIN MENU -->
     <div id="startMenu" class="menu-screen">
         <h1>NEON<br><span>TRINITY '26</span></h1>
-        <div class="status-box" id="startMsg">SISTEMA: ONLINE.<br>Motor BPM en tiempo real activo.</div>
+        <div class="status-box" id="startMsg">SISTEMA: ONLINE.<br>Curva de dificultad dinámica activa.</div>
         
         <div class="section-title">ÓRBITAS ACTIVAS</div>
         <div class="orbit-selector">
@@ -186,10 +186,10 @@
                 themeBtns: document.querySelectorAll('.theme-btn'), nameInput: document.getElementById('nameInput'),
                 submitScoreBtn: document.getElementById('submitScoreBtn'), leaderboardList: document.getElementById('leaderboardList'),
                 submitScoreArea: document.getElementById('submitScoreArea'), ldmBtn: document.getElementById('ldmBtn'),
-                volSliderCanvas: document.getElementById('volSliderCanvas'), bpmHUD: document.getElementById('bpmHUD')
+                volSliderCanvas: document.getElementById('volSliderCanvas'), beatHUD: document.getElementById('beatHUD')
             };
             
-            let gameState = 'MENU', score = 0, frames = 0, W, H, CX, CY;
+            let gameState = 'MENU', score = 0, frames = 0, framesSinceSpawn = 0, W, H, CX, CY;
             let animationId;
             let laneCount = 3;
             let radii = [], baseRadii = [];
@@ -204,25 +204,17 @@
             let config = { theme: 'io26', colors: THEMES['io26'], ldm: false, volume: 0.5 };
             const RADIOS = { gaming: "https://stream.zeno.fm/0r0xa792kwzuv", trap: "https://stream.zeno.fm/f3wvbbqmdg8uv", bass: "https://bassdrive.radioca.st/;" };
 
-            // --- AUDIO ENGINE Y MOTOR BPM ---
+            // --- AUDIO ENGINE ---
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             let actx, analyser, dataArray, sourceNode, audioEl, filterNode, masterGain;
             let globalAudioBuffer = null, noiseBuffer = null;
             
             let kickVisual = 0, isMusicLoaded = false;
-            let beatHeat = 0, energyHistory = [], prevSpectrum = null;
-            let lastPeakTime = 0;
+            let beatHeat = 0, bassHistory = [];
+            let lastKickTime = 0, totalKicks = 0;
             
-            // Variables del Motor BPM
-            const BPM_ENGINE = {
-                deltas: [],
-                beatInterval: 0.5, // Empieza asumiendo 120 BPM (1 beat cada 0.5s)
-                nextGridBeat: 0,
-                gridBeatCount: 0,
-                currentBPM: 120
-            };
-
             const audio = {
+                isKick: false, 
                 init: () => { 
                     if(!actx) {
                         actx = new AudioContext();
@@ -234,9 +226,7 @@
                         const bufferSize = actx.sampleRate * 0.1; 
                         noiseBuffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
                         const output = noiseBuffer.getChannelData(0);
-                        for (let i = 0; i < bufferSize; i++) {
-                            output[i] = Math.random() * 2 - 1;
-                        }
+                        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
                     } 
                     if(actx.state === 'suspended') actx.resume(); 
                 },
@@ -268,8 +258,7 @@
                 reset: () => { 
                     if(sourceNode) { try{sourceNode.disconnect(); if(sourceNode.stop) sourceNode.stop();}catch(e){} }
                     if(audioEl) { audioEl.pause(); audioEl.src = ""; audioEl.remove(); audioEl = null; }
-                    isMusicLoaded = false; energyHistory = [];
-                    BPM_ENGINE.deltas = []; BPM_ENGINE.beatInterval = 0.5;
+                    isMusicLoaded = false; bassHistory = []; audio.isKick = false;
                 },
                 handleFileSelect: (e) => {
                     const file = e.target.files[0];
@@ -302,7 +291,6 @@
                         sourceNode = actx.createBufferSource(); sourceNode.buffer = globalAudioBuffer; sourceNode.loop = true;
                         setupAudioGraph(sourceNode); sourceNode.start(0);
                     } else if (audioEl) { audioEl.play(); }
-                    BPM_ENGINE.nextGridBeat = actx.currentTime + BPM_ENGINE.beatInterval;
                 },
                 stopPlayback: () => { if(sourceNode && sourceNode.buffer) try{sourceNode.stop();}catch(e){} if(audioEl) audioEl.pause(); },
                 
@@ -310,62 +298,39 @@
                     if (!analyser) return;
                     analyser.getByteFrequencyData(dataArray);
                     const now = actx.currentTime;
+                    audio.isKick = false; 
                     
-                    let sumSquares = 0; 
-                    for(let i = 0; i < 10; i++) sumSquares += dataArray[i] * dataArray[i];
-                    const rms = Math.sqrt(sumSquares / 10);
+                    let bassSum = 0; 
+                    for(let i = 0; i < 6; i++) bassSum += dataArray[i];
+                    const currentBass = bassSum / 6;
 
-                    let flux = 0;
-                    if (prevSpectrum) {
-                        for (let i = 0; i < 15; i++) {
-                            let diff = dataArray[i] - prevSpectrum[i];
-                            if (diff > 0) flux += diff;
-                        }
-                    }
-                    prevSpectrum = new Uint8Array(dataArray);
+                    bassHistory.push(currentBass);
+                    if (bassHistory.length > 60) bassHistory.shift(); 
 
-                    const combinedScore = (rms * 0.4) + (flux * 0.6);
-                    energyHistory.push(combinedScore);
-                    if (energyHistory.length > 100) energyHistory.shift();
+                    // Tolerancia sensible para detectar los kicks y bailes de enemigos
+                    const avgBass = bassHistory.reduce((a, b) => a + b, 0) / bassHistory.length;
+                    const dynamicThreshold = Math.max(100, avgBass * 1.08);
 
-                    const sortedHistory = [...energyHistory].sort((a, b) => a - b);
-                    const threshold = Math.max(sortedHistory[Math.floor(0.85 * sortedHistory.length)] || 0, 40) * 1.15;
-
-                    // DETECCIÓN DE PICO REAL (BEAT)
-                    if (combinedScore > threshold && (now - lastPeakTime > 0.25)) {
-                        const delta = now - lastPeakTime;
-                        lastPeakTime = now;
-                        beatHeat = Math.min(beatHeat + 0.2, 0.8);
-                        if(!config.ldm) screenShake = Math.min(screenShake + 2, 8); 
-
-                        // MOTOR BPM: Añadir delta si es un tempo musical válido (entre 60 y 200 BPM)
-                        if (delta > 0.3 && delta < 1.0) {
-                            BPM_ENGINE.deltas.push(delta);
-                            if (BPM_ENGINE.deltas.length > 8) BPM_ENGINE.deltas.shift();
-                            
-                            // Mediana para descartar ruidos erráticos
-                            let sortedDeltas = [...BPM_ENGINE.deltas].sort((a,b) => a-b);
-                            BPM_ENGINE.beatInterval = sortedDeltas[Math.floor(sortedDeltas.length/2)];
-                            BPM_ENGINE.currentBPM = Math.round(60 / BPM_ENGINE.beatInterval);
-                            
-                            ui.bpmHUD.innerText = `BPM: ${BPM_ENGINE.currentBPM}`;
-
-                            // Phase Sync: Si el metrónomo interno se desfasó del audio real, lo ajustamos suavemente
-                            const error = now - BPM_ENGINE.nextGridBeat;
-                            if (Math.abs(error) > BPM_ENGINE.beatInterval * 0.3) {
-                                BPM_ENGINE.nextGridBeat = now + BPM_ENGINE.beatInterval;
-                            }
-                        }
+                    if (currentBass > dynamicThreshold && (now - lastKickTime > 0.20)) {
+                        audio.isKick = true;
+                        lastKickTime = now;
+                        totalKicks++;
+                        beatHeat = Math.min(beatHeat + 0.4, 0.8);
+                        if(!config.ldm) screenShake = Math.min(screenShake + 3, 10); 
+                        
+                        ui.beatHUD.style.opacity = '1';
+                        ui.beatHUD.style.transform = 'scale(1.1)';
+                        setTimeout(() => { ui.beatHUD.style.opacity = '0.3'; ui.beatHUD.style.transform = 'scale(1)'; }, 100);
                     }
                     
                     beatHeat *= 0.92;
-                    const targetVisual = Math.min(rms / 200, 1.0); 
+                    const targetVisual = Math.min(currentBass / 255, 1.0); 
                     kickVisual += (targetVisual - kickVisual) * 0.3;
                 }
             };
 
             function setupAudioGraph(source) {
-                filterNode = actx.createBiquadFilter(); filterNode.type = "lowpass"; filterNode.frequency.value = 200;
+                filterNode = actx.createBiquadFilter(); filterNode.type = "lowpass"; filterNode.frequency.value = 120;
                 analyser = actx.createAnalyser(); analyser.fftSize = 256;
                 source.connect(masterGain); 
                 source.connect(filterNode); 
@@ -375,7 +340,6 @@
 
             // --- LOCAL LEADERBOARD ---
             let localScores = JSON.parse(localStorage.getItem('io_scores')) || [];
-            
             function loadLeaderboard() {
                 ui.leaderboardList.innerHTML = '';
                 localScores.sort((a, b) => b.score - a.score);
@@ -479,67 +443,68 @@
                 }
             }
             
-            let player, obstacles=[], coins=[], particles=[], lastEnemyLane=-1;
+            let player, obstacles=[], coins=[], particles=[];
+
+            function spawnCoin() {
+                const spawnAngle = player.angle + Math.PI; 
+                let availableLanes = Array.from({length: laneCount}, (_, i) => i).sort(()=>Math.random()-0.5);
+                
+                let placed = false;
+                for(let lane of availableLanes){
+                    const busy = obstacles.some(o=> o.active && Math.abs(o.angle-spawnAngle)<0.5 && o.lane===lane);
+                    if(!busy){ coins.push({angle:spawnAngle, lane:lane, active:true}); placed = true; break; }
+                }
+                if (!placed) coins.push({angle:spawnAngle, lane: Math.floor(Math.random() * laneCount), active:true});
+            }
 
             function init(){
                 cancelAnimationFrame(animationId);
                 audio.init(); 
                 if(isMusicLoaded) audio.startPlayback();
-                score=0; frames=0; lastEnemyLane=-1; screenShake=0;
-                BPM_ENGINE.gridBeatCount = 0; // Reiniciar cuenta de beats
+                score=0; frames=0; framesSinceSpawn=0; screenShake=0; totalKicks=0;
                 ui.scoreEl.innerText=0; player=new Player(); obstacles=[]; coins=[]; particles=[];
                 gameState='PLAYING'; 
                 ui.startMenu.classList.add('hidden'); ui.gameOverMenu.classList.add('hidden');
-                ui.bpmHUD.style.opacity = '1';
+                ui.beatHUD.style.opacity = '0.3';
                 
                 ui.submitScoreBtn.disabled = false;
                 ui.submitScoreBtn.innerText = "GUARDAR";
                 ui.submitScoreArea.style.display = 'flex';
                 
+                spawnCoin(); 
                 loop();
             }
             
             function spawnEnemy() {
-                // Aparecen con una distancia en radianes relativa a la velocidad para dar margen de reacción
-                const targetAngle = player.angle + (player.rotationSpeed * 70);
-                if(coins.some(c => Math.abs(c.angle - targetAngle) < 0.5)) return;
+                const targetAngle = player.angle + Math.PI * 0.8 + (Math.random() * Math.PI * 0.4);
                 
-                let lane=Math.floor(Math.random() * laneCount); 
-                if(lastEnemyLane!==-1 && laneCount > 1 && Math.random() < 0.6) { 
-                    while(lane === lastEnemyLane) lane=Math.floor(Math.random() * laneCount); 
-                }
-                lastEnemyLane=lane;
-                const isJumper = (score > 10) && (Math.random() < 0.3) && (laneCount > 1);
+                let occupiedLanes = [];
+                obstacles.forEach(o => {
+                    if (o.active && Math.abs(o.angle - targetAngle) < 0.4) occupiedLanes.push(o.lane);
+                });
                 
-                // Novedad: Jumpers ya no usan "Timer", solo confían en las Fases (0, 1, 2)
-                obstacles.push({ angle: targetAngle, lane: lane, currentRadius: radii[lane], active: true, isJumper: isJumper, originalLane: lane, jumpPhase: 0 });
-            }
-
-            function manageCoins(){
-                const spawnAngle=player.angle+(Math.PI * 1.5);
-                const lanes = Array.from({length: laneCount}, (_, i) => i).sort(()=>Math.random()-0.5);
-                for(let lane of lanes){
-                    const busy=obstacles.some(o=>o.active&&Math.abs(o.angle-spawnAngle)<0.5&&o.lane===lane);
-                    if(!busy){ coins.push({angle:spawnAngle,lane:lane,active:true}); break; }
+                let availableLanes = [];
+                for(let i=0; i<laneCount; i++) {
+                    if(!occupiedLanes.includes(i)) availableLanes.push(i);
                 }
+                
+                if (availableLanes.length <= 1 && occupiedLanes.length >= laneCount - 1) return; 
+                
+                let lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+                
+                // --- Ajuste Saltadores: Aparecen rara vez y solo en puntos medios ---
+                let isJumper = (score >= 15) && (Math.random() < 0.15) && (laneCount > 1);
+                
+                obstacles.push({ angle: targetAngle, lane: lane, currentRadius: radii[lane], active: true, isJumper: isJumper, originalLane: lane, jumpPhase: 0, scale: 1 });
             }
             
             function update(){
                 if(gameState!=='PLAYING')return;
                 frames++;
+                framesSinceSpawn++;
                 if(isMusicLoaded) audio.analyze();
                 
-                // EL METRÓNOMO INTERNO EN TIEMPO REAL
-                let isGridBeat = false;
-                if (isMusicLoaded && actx && actx.currentTime >= BPM_ENGINE.nextGridBeat) {
-                    isGridBeat = true;
-                    BPM_ENGINE.nextGridBeat += BPM_ENGINE.beatInterval;
-                    BPM_ENGINE.gridBeatCount++;
-                } else if (!isMusicLoaded && frames % 45 === 0) {
-                    // Fallback si juegas en silencio
-                    isGridBeat = true;
-                    BPM_ENGINE.gridBeatCount++;
-                }
+                let isGameKick = isMusicLoaded ? audio.isKick : (frames % 45 === 0);
 
                 screenShake *= 0.9; 
                 beatHeat *= 0.94;
@@ -548,56 +513,64 @@
 
                 player.update();
                 
-                // EVENTOS SINCRONIZADOS A LA CUADRÍCULA MUSICAL
-                if (isGridBeat) {
-                    // Dificultad adaptativa: cada cuántos BEATS sale un enemigo
-                    let spawnRateBeats = Math.max(1, 4 - Math.floor(score / 50)); 
-                    if (BPM_ENGINE.gridBeatCount % spawnRateBeats === 0) spawnEnemy();
-                    
-                    // Monedas esporádicas pero SIEMPRE a ritmo
-                    if (coins.length === 0 && Math.random() < 0.1) manageCoins();
+                if (coins.length === 0) spawnCoin();
+                
+                // CURVA DE DIFICULTAD CORREGIDA: Empieza en 1 enemigo máximo en todo el mapa. Sube 1 cada 30 ptos.
+                let maxEnemiesOnScreen = Math.min(laneCount * 2, 1 + Math.floor(score / 30));
+                
+                // COOLDOWN ESTRICTO: Por más kicks que haya, debes esperar (Empieza en ~1.5s, baja a ~0.4s)
+                let minFramesBetweenSpawns = Math.max(25, 90 - score); 
+                
+                let forceSpawn = framesSinceSpawn > Math.max(70, 180 - score * 2);
+
+                if ((isGameKick || forceSpawn) && framesSinceSpawn >= minFramesBetweenSpawns && obstacles.length < maxEnemiesOnScreen) {
+                    spawnEnemy();
+                    framesSinceSpawn = 0;
                 }
 
                 obstacles.forEach(o => {
                     if(!o.active) return;
                     
-                    // LÓGICA DE SALTADORES BASADA 100% EN BEATS (Música Real)
-                    if(o.isJumper && isGridBeat){
+                    if(o.isJumper && isGameKick){
                         if(o.jumpPhase === 0) { 
                             const possibleLanes = [];
-                            if(o.lane > 0) possibleLanes.push(o.lane - 1);
-                            if(o.lane < laneCount - 1) possibleLanes.push(o.lane + 1);
+                            if(o.originalLane > 0) possibleLanes.push(o.originalLane - 1);
+                            if(o.originalLane < laneCount - 1) possibleLanes.push(o.originalLane + 1);
                             if(possibleLanes.length > 0) {
                                 o.lane = possibleLanes[Math.floor(Math.random() * possibleLanes.length)];
                                 const ex=CX+Math.cos(o.angle)*o.currentRadius, ey=CY+Math.sin(o.angle)*o.currentRadius;
-                                createParticles(ex, ey, config.colors.jumper, 5); 
+                                createParticles(ex, ey, config.colors.jumper, 4); 
                                 o.jumpPhase = 1; 
                             }
-                        } else if(o.jumpPhase === 1) { 
+                        } else { 
                             o.lane = o.originalLane;
                             const ex=CX+Math.cos(o.angle)*o.currentRadius, ey=CY+Math.sin(o.angle)*o.currentRadius;
-                            createParticles(ex, ey, config.colors.jumper, 5); 
-                            o.jumpPhase = 2; 
-                        } else if(o.jumpPhase === 2) {
-                            const ex=CX+Math.cos(o.angle)*o.currentRadius, ey=CY+Math.sin(o.angle)*o.currentRadius;
-                            createParticles(ex, ey, config.colors.jumper, 15);
-                            o.active = false;
+                            createParticles(ex, ey, config.colors.jumper, 4); 
+                            o.jumpPhase = 0; 
                         }
                     }
                     o.currentRadius += (radii[o.lane] - o.currentRadius) * 0.3; 
+                    
+                    if (player.angle - o.angle > Math.PI) {
+                        o.scale -= 0.1;
+                        if (o.scale <= 0) o.active = false;
+                    }
                 });
                 
-                const SAFE_ZONE=Math.PI*2; 
-                obstacles=obstacles.filter(e=>e.active&&(e.angle>player.angle-SAFE_ZONE));
+                obstacles = obstacles.filter(e => e.active);
                 
                 const checkHit=(e,isCoin)=>{
+                    if (player.angle - e.angle > Math.PI * 0.5 && !isCoin) return; 
+
                     const r = isCoin ? radii[e.lane] : e.currentRadius; 
                     const ex=CX+Math.cos(e.angle)*r,ey=CY+Math.sin(e.angle)*r,dist=Math.hypot(player.x-ex,player.y-ey);
+                    
                     if(dist<15){ 
                         if(isCoin){
                             score+=5; ui.scoreEl.innerText=score; audio.coin(); 
                             createParticles(ex,ey,config.colors.coin, 12);
                             const idx=coins.indexOf(e);if(idx>-1)coins.splice(idx,1);
+                            spawnCoin(); 
                         }else{
                             audio.crash(); 
                             screenShake = 25; 
@@ -695,7 +668,9 @@
                         
                         ctx.fillStyle = color; 
                         if (!config.ldm) { ctx.shadowBlur = 10 + (kickVisual * 10); ctx.shadowColor = color; }
+                        
                         ctx.beginPath(); ctx.save(); ctx.translate(ex,ey); ctx.rotate(o.angle+Math.PI/4 + (frames*0.05)); 
+                        ctx.scale(o.scale, o.scale); 
                         
                         if(o.isJumper) {
                             const s = 10;
@@ -732,7 +707,7 @@
                 ui.submitScoreArea.style.display = 'flex';
                 ui.submitScoreBtn.disabled = false;
                 ui.submitScoreBtn.innerText = "GUARDAR";
-                ui.bpmHUD.style.opacity = '0';
+                ui.beatHUD.style.opacity = '0';
                 loadLeaderboard();
             }
             
@@ -743,7 +718,6 @@
                 update(); draw(); 
             }
             
-            // CONTROLES CON FIX PARA KEY REPEAT
             window.addEventListener('keydown', (e) => {
                 if(e.repeat) return; 
                 const k = e.key.toLowerCase();
@@ -784,7 +758,7 @@
             bind(ui.radio3Btn, () => audio.playRadio(RADIOS.bass, ui.radio3Btn));
 
             bind(ui.startBtn, init); bind(ui.restartBtn, init);
-            bind(ui.homeBtn, () => { gameState = 'MENU'; ui.gameOverMenu.classList.add('hidden'); ui.startMenu.classList.remove('hidden'); audio.stopPlayback(); ui.bpmHUD.style.opacity = '0'; });
+            bind(ui.homeBtn, () => { gameState = 'MENU'; ui.gameOverMenu.classList.add('hidden'); ui.startMenu.classList.remove('hidden'); audio.stopPlayback(); ui.beatHUD.style.opacity = '0'; });
             bind(ui.settingsBtn, () => ui.settingsMenu.classList.remove('hidden'));
             bind(ui.closeSettingsBtn, () => { saveConfig(); ui.settingsMenu.classList.add('hidden'); });
             bind(ui.ldmBtn, () => { config.ldm = !config.ldm; updateLdmUI(); draw(); });
